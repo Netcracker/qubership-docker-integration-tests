@@ -6,9 +6,7 @@ ENV IS_ANALYZER_RESULT_ENABLED=true
 ENV IS_TAGS_RESOLVER_ENABLED=true
 ENV STATUS_WRITING_ENABLED=false
 
-COPY docker/alpine-repositories /etc/apk/repositories
 COPY docker/docker-entrypoint.sh /
-COPY docker/pip.conf /etc/pip.conf
 COPY docker/requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY docker/robot_tags_resolver.py ${ROBOT_HOME}/robot_tags_resolver.py
 COPY docker/analyze_result.py ${ROBOT_HOME}/analyze_result.py
