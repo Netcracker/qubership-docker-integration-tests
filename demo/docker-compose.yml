@@ -1,0 +1,24 @@
+version: '2'
+services:
+  integration-tests:
+    build:
+      context: ./
+      dockerfile: docker/Dockerfile
+    ports:
+      - 8090:8080
+    volumes:
+      - ./docker/robot/tests:/opt/robot/tests
+      - ./output:/opt/robot/output
+#      - <path_to_host_folder>:/mnt
+    environment:
+#      - KUBECONFIG=/mnt/<path_to_host_config>
+      - DEBUG=true
+      #variables for writing status in CR
+#      - STATUS_WRITING_ENABLED=true
+#      - STATUS_CUSTOM_RESOURCE_GROUP=netcracker.com
+#      - STATUS_CUSTOM_RESOURCE_VERSION=v1
+#      - STATUS_CUSTOM_RESOURCE_NAMESPACE=zookeeper-service
+#      - STATUS_CUSTOM_RESOURCE_PLURAL=zookeeperservices
+#      - STATUS_CUSTOM_RESOURCE_NAME=zookeeper
+#      - ONLY_INTEGRATION_TESTS=false
+    command: ["run-robot"]
