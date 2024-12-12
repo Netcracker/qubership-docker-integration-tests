@@ -1,3 +1,3 @@
-FROM product/prod.platform.streaming_docker-integration-tests:latest
+FROM ghcr.io/netcracker/docker-integration-tests:main
 
 COPY docker/robot  ${ROBOT_HOME}

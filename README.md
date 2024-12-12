@@ -124,7 +124,7 @@ permissions on entity group with the verbs `get`, `patch` and resources `<resour
 For example, permissions for write status in Custom Resource:
 ```
 - apiGroups:
-  - netcracker.com
+  - qubership.org
   resources:
   - platformmonitorings/status
   verbs:
@@ -134,15 +134,15 @@ For example, permissions for write status in Custom Resource:
 
 To write status to some k8s entity you should specify the entity. There are two ways to do this. The first one is to specify
 full path. For example, you have `ZooKeeperService` custom resource which has
-`metadata.selfLink` field with value - `/apis/netcracker.com/v1/namespaces/zookeeper-service/zookeeperservices/zookeeper`,
+`metadata.selfLink` field with value - `/apis/qubership.org/v1/namespaces/zookeeper-service/zookeeperservices/zookeeper`,
 in the current approach you should specify `STATUS_CUSTOM_RESOURCE_PATH` environment variable with value from `selfLink` without
 `apis` prefix and `namespaces` part:
 ```
-STATUS_CUSTOM_RESOURCE_PATH=netcracker.com/v1/zookeeper-service/zookeeperservices/zookeeper
+STATUS_CUSTOM_RESOURCE_PATH=qubership.org/v1/zookeeper-service/zookeeperservices/zookeeper
 ```
 The second approach is to point the path in parts using the following environment variables:
 ```
-STATUS_CUSTOM_RESOURCE_GROUP=netcracker.com
+STATUS_CUSTOM_RESOURCE_GROUP=qubership.org
 STATUS_CUSTOM_RESOURCE_VERSION=v1 
 STATUS_CUSTOM_RESOURCE_NAMESPACE=zookeeper-service
 STATUS_CUSTOM_RESOURCE_PLURAL=zookeeperservices 

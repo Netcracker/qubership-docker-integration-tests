@@ -7,9 +7,9 @@ Robot Framework file (*.robot) with keywords and test cases, special python file
 `tests_holder.robot` file contains Robot Framework test cases. You can add new test cases or keywords to test `PlatformLibrary`.
 To configure `docker-compose.yml` file you should configure Kubernetes configuration file (set environment, context, etc.),
 mount you host folder which contains "./kube/config" file (or custom kubeconfig), specify `KUBECONFIG` environment variable
-with path to mounted kubeconfig file. For example, you have the following kubeconfig file: C:/Users/aaaa0000/.kube/config,
+with path to mounted kubeconfig file. For example, you have the following kubeconfig file: C:/Users/test/.kube/config,
 you can mount disk "C" to "/mnt" directory in `volumes` block of docker-compose.yml (- C:/:/mnt) and specify `KUBECONFIG` 
-environment variable as /mnt/Users/aaaa0000/.kube/config:
+environment variable as /mnt/Users/test/.kube/config:
 ```yaml
 version: '2'
 services:
@@ -24,7 +24,7 @@ services:
       - ./output:/opt/robot/output
       - C:/:/mnt
     environment:
-      - KUBECONFIG=/mnt/Users/aaaa0000/.kube/config
+      - KUBECONFIG=/mnt/Users/test/.kube/config
       - DEBUG=true
     command: ["run-robot"]
 ```

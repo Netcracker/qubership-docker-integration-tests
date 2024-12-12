@@ -15,7 +15,7 @@ services:
       - DEBUG=true
       #variables for writing status in CR
 #      - STATUS_WRITING_ENABLED=true
-#      - STATUS_CUSTOM_RESOURCE_GROUP=netcracker.com
+#      - STATUS_CUSTOM_RESOURCE_GROUP=qubership.org
 #      - STATUS_CUSTOM_RESOURCE_VERSION=v1
 #      - STATUS_CUSTOM_RESOURCE_NAMESPACE=zookeeper-service
 #      - STATUS_CUSTOM_RESOURCE_PLURAL=zookeeperservices
