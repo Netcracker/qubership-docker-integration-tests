@@ -6,7 +6,7 @@ on:
     branches:
       - 'main'
 env:
-  TAG_NAME: ${{ github.event.release.tag_name || (github.ref == 'refs/heads/main' && 'main') }}
+  TAG_NAME: ${{ github.event.release.tag_name || github.ref }}
 
 jobs:
   multiplatform_build:
@@ -30,6 +30,15 @@ jobs:
           registry: ghcr.io
           username: ${GITHUB_ACTOR}
           password: ${{secrets.GITHUB_TOKEN}}
+      - name: Prepare Tag
+        run: echo "TAG_NAME=$(echo ${TAG_NAME} | sed 's@refs/tags/@@;s@refs/heads/@@;s@/@_@g')" >> $GITHUB_ENV
+      - name: Get package IDs for delete
+        id: get-ids-for-delete
+        uses: Netcracker/get-package-ids@v0.0.1
+        with:
+          component-name: ${{ matrix.component.name }}
+          component-tag: ${{ env.TAG_NAME }}
+          access-token: ${{ secrets.GH_ACCESS_TOKEN }}
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -40,3 +49,9 @@ jobs:
           push: true
           tags: ghcr.io/netcracker/${{ matrix.component.name }}:${{ env.TAG_NAME }}
           provenance: false
+      - uses: actions/delete-package-versions@v5
+        with:
+          package-name: ${{ matrix.component.name }}
+          package-type: 'container'
+          package-version-ids: ${{ steps.get-ids-for-delete.outputs.ids-for-delete }}
+        if: ${{ steps.get-ids-for-delete.outputs.ids-for-delete != '' }}

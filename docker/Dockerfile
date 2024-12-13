@@ -28,7 +28,7 @@ RUN set -x \
 RUN set -x \
     && python3 -m ensurepip \
     && rm -r /usr/lib/python*/ensurepip \
-    && pip3 install --upgrade pip setuptools==70.0.0 \
+    && pip3 install --upgrade pip setuptools \
     && pip3 install -r ${ROBOT_HOME}/requirements.txt \
     && pip3 install --no-cache-dir ${ROBOT_HOME}/integration-tests-built-in-library \
     && rm -rf ${ROBOT_HOME}/integration-tests-built-in-library \
