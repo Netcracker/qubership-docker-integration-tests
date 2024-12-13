@@ -10,7 +10,7 @@ jobs:
       fail-fast: false
       matrix:
         component:
-          - name: docker-integration-tests
+          - name: qubership-docker-integration-tests
     if: github.event.ref_type == 'branch'
     runs-on: ubuntu-latest
     steps:
