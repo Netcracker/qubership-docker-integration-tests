@@ -10,7 +10,7 @@ setuptools.setup(
     description="BuiltIn Robot Framework keywords source package",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/Netcracker/docker-integration-tests/integration-tests-built-in-library",
+    url="https://github.com/Netcracker/qubership-docker-integration-tests/integration-tests-built-in-library",
     packages=setuptools.find_packages(),
     classifiers=[
         "Programming Language :: Python :: 3",
