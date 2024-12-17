@@ -1,7 +1,7 @@
-FROM python:3.10.14-alpine3.20
+FROM python:3.13.1-alpine3.21
 
 ENV ROBOT_HOME=/opt/robot
-ENV PYTHONPATH=/usr/local/lib/python3.10/site-packages/integration_library_builtIn
+ENV PYTHONPATH=/usr/local/lib/python3.13/site-packages/integration_library_builtIn
 ENV IS_ANALYZER_RESULT_ENABLED=true
 ENV IS_TAGS_RESOLVER_ENABLED=true
 ENV STATUS_WRITING_ENABLED=false
