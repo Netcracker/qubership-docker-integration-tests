@@ -28,7 +28,7 @@ jobs:
         with:
           component-name: ${{ matrix.component.name }}
           component-tag: ${{ env.TAG_NAME }}
-          access-token: ${{ secrets.GH_ACCESS_TOKEN }}
+          access-token: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/delete-package-versions@v5
         with:
           package-name: ${{ matrix.component.name }}
