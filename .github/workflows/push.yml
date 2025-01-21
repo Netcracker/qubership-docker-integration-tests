@@ -4,7 +4,7 @@ on:
     types: [created]
   push:
     branches:
-      - 'main'
+      - '**'
   workflow_dispatch:
     inputs:
       publish_docker:
