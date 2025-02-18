@@ -1633,3 +1633,112 @@ class PlatformLibrary(object):
             return cm
         else:
             return None
+        
+    def get_statefulset_resources(self, statefulset_name, namespace):
+        statefulset = self.k8s_apps_v1_client.read_namespaced_stateful_set(statefulset_name, namespace)
+        containers = statefulset.spec.template.spec.containers
+        if len(containers) > 0:
+            resources = containers[0].resources
+            requests = resources.requests
+            limits = resources.limits
+            return {
+                "requests": {
+                    "memory": requests.get("memory", "No memory request set"),
+                    "cpu": requests.get("cpu", "No CPU request set")
+                },
+                "limits": {
+                    "memory": limits.get("memory", "No memory limit set"),
+                    "cpu": limits.get("cpu", "No CPU limit set")
+                }
+            }
+        else:
+            print("No containers found in the StatefulSet.")
+            return None
+
+    def patch_statefulset_memory(self, statefulset_name, namespace, new_memory_request, new_memory_limit, current_resources, container_name=None):
+        if current_resources:
+            # Retrieve the StatefulSet object to find the container name
+            statefulset = self.k8s_apps_v1_client.read_namespaced_stateful_set(statefulset_name, namespace)
+            containers = statefulset.spec.template.spec.containers
+
+            if len(containers) > 0:
+                # Use provided container name or default to the first container
+                target_container_name = container_name if container_name else containers[0].name 
+
+                # Prepare patch for memory request and limits (keeping CPU values unchanged)
+                patch_body = {
+                    "spec": {
+                        "template": {
+                            "spec": {
+                                "containers": [{
+                                    "name": target_container_name,  # Use the specified or default container name
+                                    "resources": {
+                                        "requests": {
+                                            "memory": new_memory_request,
+                                            "cpu": current_resources['requests']['cpu']
+                                        },
+                                        "limits": {
+                                            "memory": new_memory_limit,
+                                            "cpu": current_resources['limits']['cpu']
+                                        }
+                                    }
+                                }]
+                            }
+                        }
+                    }
+                }
+
+                try:
+                    # Apply the patch to the StatefulSet
+                    self.k8s_apps_v1_client.patch_namespaced_stateful_set(
+                        name=statefulset_name,
+                        namespace=namespace,
+                        body=patch_body
+                    )
+                    print(f"StatefulSet {statefulset_name} patched with new memory request: {new_memory_request} and new memory limit: {new_memory_limit}")
+                except client.exceptions.ApiException as e:
+                    print(f"Exception when patching StatefulSet: {e}")
+            else:
+                print(f"No containers found in the StatefulSet {statefulset_name}.")
+
+
+
+    def restore_statefulset_resources(self, statefulset_name, namespace, original_resources):
+        try:
+            # Retrieve the StatefulSet object to get the container names
+            statefulset = self.k8s_apps_v1_client.read_namespaced_stateful_set(statefulset_name, namespace)
+            containers = statefulset.spec.template.spec.containers
+            
+            if len(containers) > 0:
+                # Get the name of the first container (or modify this logic as needed)
+                container_name = containers[0].name
+                
+                # Prepare patch to restore the original resources
+                patch_body = {
+                    "spec": {
+                        "template": {
+                            "spec": {
+                                "containers": [{
+                                    "name": container_name,  # Use the dynamically obtained container name
+                                    "resources": {
+                                        "requests": original_resources['requests'],
+                                        "limits": original_resources['limits']
+                                    }
+                                }]
+                            }
+                        }
+                    }
+                }
+
+                # Apply the patch to restore original resources
+                self.k8s_apps_v1_client.patch_namespaced_stateful_set(
+                    name=statefulset_name,
+                    namespace=namespace,
+                    body=patch_body
+                )
+                print(f"StatefulSet {statefulset_name} restored to original resources.")
+            else:
+                print(f"No containers found in the StatefulSet {statefulset_name}.")
+                
+        except client.exceptions.ApiException as e:
+            print(f"Exception when restoring StatefulSet resources: {e}")
