@@ -1,4 +1,4 @@
-FROM python:3.13.1-alpine3.21
+FROM python:3.13.2-alpine3.21
 
 ENV ROBOT_HOME=/opt/robot
 ENV PYTHONPATH=/usr/local/lib/python3.13/site-packages/integration_library_builtIn
