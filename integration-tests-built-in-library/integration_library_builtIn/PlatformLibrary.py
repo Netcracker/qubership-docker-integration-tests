@@ -1569,6 +1569,16 @@ class PlatformLibrary(object):
         | Create Secret | elasticsearch | secret_body |
         """
         return self.k8s_core_v1_client.create_namespaced_secret(namespace, body)
+    
+    def patch_secret(self, name, namespace, body):
+        """Update secret in specified project/namespace.
+		:param name: the secret's name
+        :param namespace: the secret's namespace
+        :param body: the JSON schema of the Secret to create.
+        Example:
+        | Patch Secret | opensearch-secret | opensearch | secret_body |
+        """
+        return self.k8s_core_v1_client.patch_namespaced_secret(name, namespace, body)
 
     def delete_secret_by_name(self, name: str, namespace: str):
         """
