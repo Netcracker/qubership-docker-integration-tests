@@ -1,0 +1,17 @@
+version: 2
+updates:
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "monthly"
+# Python/pip configurations
+- package-ecosystem: "pip"
+  directory: "/docker"
+  schedule:
+    interval: "monthly"
+  open-pull-requests-limit: 20
+# Docker configurations
+- package-ecosystem: "docker"
+  directory: "/docker"
+  schedule:
+    interval: "monthly"
