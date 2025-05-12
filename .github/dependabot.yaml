@@ -4,14 +4,33 @@ updates:
   directory: "/"
   schedule:
     interval: "monthly"
+  commit-message:
+    prefix: chore
+    prefix-development: chore
+    include: scope
 # Python/pip configurations
 - package-ecosystem: "pip"
   directory: "/docker"
   schedule:
     interval: "monthly"
   open-pull-requests-limit: 20
+  groups:
+    boto3:
+      patterns:
+      - "boto*"
+    robotframework:
+      patterns:
+      - "robotframework*"
+  commit-message:
+    prefix: chore
+    prefix-development: chore
+    include: scope
 # Docker configurations
 - package-ecosystem: "docker"
   directory: "/docker"
   schedule:
     interval: "monthly"
+  commit-message:
+    prefix: chore
+    prefix-development: chore
+    include: scope
