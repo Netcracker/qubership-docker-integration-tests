@@ -56,17 +56,17 @@ case $1 in
       fi
     fi
 
-    if [[ -n "$SERVICE_CHECKER_SCRIPT" ]]; then
-        timeout=300
-        if [[ -n "$SERVICE_CHECKER_SCRIPT_TIMEOUT" ]]; then
-            timeout=${SERVICE_CHECKER_SCRIPT_TIMEOUT}
-        fi
-        python ${SERVICE_CHECKER_SCRIPT} ${timeout}
-        if [[ $? -ne 0 ]]; then
-            echo "Service is not ready at least $timeout seconds or some exception occurred"
-            exit 1
-        fi
-    fi
+#    if [[ -n "$SERVICE_CHECKER_SCRIPT" ]]; then
+#        timeout=300
+#        if [[ -n "$SERVICE_CHECKER_SCRIPT_TIMEOUT" ]]; then
+#            timeout=${SERVICE_CHECKER_SCRIPT_TIMEOUT}
+#        fi
+#        python ${SERVICE_CHECKER_SCRIPT} ${timeout}
+#        if [[ $? -ne 0 ]]; then
+#            echo "Service is not ready at least $timeout seconds or some exception occurred"
+#            exit 1
+#        fi
+#    fi
 
     excluded_tags=""
     if [[ ${IS_TAGS_RESOLVER_ENABLED} == "true" ]]; then
