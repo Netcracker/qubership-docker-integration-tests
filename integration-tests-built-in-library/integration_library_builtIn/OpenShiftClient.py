@@ -12,158 +12,157 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from openshift.dynamic import DynamicClient
+from kubernetes import client
 
 
 class OpenShiftClient(object):
     def __init__(self, api_client):
         self.api_client = api_client
-        self.dyn_client = DynamicClient(api_client)
+        self.k8s_apps_v1_client = client.AppsV1Api(api_client)
         self._patch_scale_dict = {'spec': {'replicas': 1}}
 
     def get_deployment_entity(self, name: str, namespace: str):
-        return self.dyn_client.resources.get(api_version='apps.openshift.io/v1', kind='DeploymentConfig').get(namespace=namespace, name=name)
+        return self.k8s_apps_v1_client.read_namespaced_deployment(name, namespace)
 
     def get_deployment_entities(self, namespace: str):
-        deployment_configs = self.dyn_client.resources.get(api_version='apps.openshift.io/v1', kind='DeploymentConfig')
-        return deployment_configs.get(namespace=namespace).items
+        return [deployment for deployment in self.k8s_apps_v1_client.list_namespaced_deployment(namespace).items]
 
     def get_deployment_entity_names_for_service(self, namespace: str, service: str, label: str = 'clusterName') -> list:
-        deployment_configs = self.get_deployment_entities(namespace)
-        deployment_config_names = []
-        for deployment in deployment_configs:
+        deployments = self.get_deployment_entities(namespace)
+        deployment_names = []
+        for deployment in deployments:
             if deployment.spec.template.metadata.labels.get(label, '') == service:
-                deployment_config_names.append(deployment.metadata.name)
-        return deployment_config_names
+                deployment_names.append(deployment.metadata.name)
+        return deployment_names
 
     def get_inactive_deployment_entities_for_service(self,
                                                      namespace: str,
                                                      service: str,
                                                      label: str = 'clusterName') -> list:
-        deployment_configs = self.get_deployment_entities(namespace)
-        inactive_dc = []
+        deployments = self.get_deployment_entities(namespace)
+        inactive_deployments = []
 
-        for dc in deployment_configs:
-            if dc.spec.template.metadata.labels.get(label, '') == service:
-                    if dc.status.availableReplicas == 0 or not dc.status.replicas:
-                        inactive_dc.append(dc)
-        return inactive_dc
+        for deployment in deployments:
+            if deployment.spec.template.metadata.labels.get(label, '') == service:
+                if deployment.status.available_replicas == 0 or not deployment.status.replicas:
+                    inactive_deployments.append(deployment)
+        return inactive_deployments
 
     def get_inactive_deployment_entities_names_for_service(self,
                                                            namespace: str,
                                                            service: str,
                                                            label: str = 'clusterName') -> list:
-        inactive_dc = self.get_inactive_deployment_entities_for_service(namespace, service, label)
-        inactive_dc_names = []
-        for deployment in inactive_dc:
-            inactive_dc_names.append(deployment.metadata.name)
-        return inactive_dc_names
+        inactive_deployments = self.get_inactive_deployment_entities_for_service(
+            namespace, service, label)
+        inactive_deployment_names = []
+        for deployment in inactive_deployments:
+            inactive_deployment_names.append(deployment.metadata.name)
+        return inactive_deployment_names
 
     def get_inactive_deployment_entities_count_for_service(self,
                                                            namespace: str,
                                                            service: str,
                                                            label: str = 'clusterName') -> int:
-        deployment_configs = self.get_deployment_entities(namespace)
-        if not deployment_configs:
+        deployments = self.get_deployment_entities(namespace)
+        if not deployments:
             return 0
         return len(self.get_inactive_deployment_entities_for_service(namespace, service, label))
-
 
     def get_first_deployment_entity_name_for_service(self,
                                                      namespace: str,
                                                      service: str,
                                                      label: str = 'clusterName') -> str:
-        deployment_configs = self.get_deployment_entities(namespace)
-        for dc in deployment_configs:
-            if dc.spec.template.metadata.labels.get(label, '') == service:
-                return dc.metadata.name
+        deployments = self.get_deployment_entities(namespace)
+        for deployment in deployments:
+            if deployment.spec.template.metadata.labels.get(label, '') == service:
+                return deployment.metadata.name
         return None
 
     def get_active_deployment_entities_for_service(self,
                                                    namespace: str,
                                                    service: str,
                                                    label: str = 'clusterName') -> list:
-        deployment_configs = self.get_deployment_entities(namespace)
-        active_dc = []
+        deployments = self.get_deployment_entities(namespace)
+        active_deployments = []
 
-        for dc in deployment_configs:
-            if dc.spec.template.metadata.labels.get(label, '') == service \
-                    and not dc.status.unavailableReplicas \
-                    and dc.status.availableReplicas != 0:
-                active_dc.append(dc)
-        return active_dc
+        for deployment in deployments:
+            if deployment.spec.template.metadata.labels.get(label, '') == service \
+                    and not deployment.status.unavailable_replicas \
+                    and deployment.status.available_replicas != 0:
+                active_deployments.append(deployment)
+        return active_deployments
 
     def get_active_deployment_entities_names_for_service(self,
                                                          namespace: str,
                                                          service: str,
-                                                         label: str ='clusterName') -> list:
-
-        active_dc = self.get_active_deployment_entities_for_service(namespace, service, label)
-        active_dc_names = []
-        for deployment in active_dc:
-            active_dc_names.append(deployment.metadata.name)
-        return active_dc_names
+                                                         label: str = 'clusterName') -> list:
+        active_deployments = self.get_active_deployment_entities_for_service(
+            namespace, service, label)
+        active_deployment_names = []
+        for deployment in active_deployments:
+            active_deployment_names.append(deployment.metadata.name)
+        return active_deployment_names
 
     def get_active_deployment_entities_count_for_service(self,
                                                          namespace: str,
                                                          service: str,
                                                          label: str = 'clusterName') -> int:
-        deployment_configs = self.get_deployment_entities(namespace)
-        if not deployment_configs:
+        deployments = self.get_deployment_entities(namespace)
+        if not deployments:
             return 0
         return len(self.get_active_deployment_entities_for_service(namespace, service, label))
 
     def get_deployment_entities_count_for_service(self, namespace: str, service: str, label: str = 'clusterName'):
         return len(self.get_deployment_entity_names_for_service(namespace, service, label))
 
+    def get_deployment_scale(self, name: str, namespace: str):
+        return self.k8s_apps_v1_client.read_namespaced_deployment_scale(name, namespace)
+
+    def set_deployment_scale(self, name: str, namespace: str, scale):
+        self.k8s_apps_v1_client.patch_namespaced_deployment_scale(
+            name, namespace, scale)
+
     def set_replicas_for_deployment_entity(self, name: str, namespace: str, replicas: int = 1):
-        self._patch_scale_dict['spec']['replicas'] = replicas
-        deployment_configs = self.dyn_client.resources.get(api_version='apps.openshift.io/v1', kind='DeploymentConfig')
-        deployment_configs.patch(body=self._patch_scale_dict, name=name, namespace=namespace)
+        scale = self.get_deployment_scale(name, namespace)
+        scale.spec.replicas = replicas
+        scale.status.replicas = replicas
+        self.set_deployment_scale(name, namespace, scale)
 
     def scale_up_deployment_entity(self, name: str, namespace: str):
-        deployment_configs = self.dyn_client.resources.get(api_version='apps.openshift.io/v1', kind='DeploymentConfig')
-        replicas = None
-        dc = deployment_configs.get(name, namespace)
-        if dc:
-            replicas = dc.spec.replicas
-        if replicas is None:
-            replicas = 1
+        scale = self.get_deployment_scale(name, namespace)
+        if scale.spec.replicas is None:
+            scale.spec.replicas = 1
         else:
-            replicas += 1
-        self._patch_scale_dict['spec']['replicas'] = replicas
-        deployment_configs.patch(body=self._patch_scale_dict, name=name, namespace=namespace)
+            scale.spec.replicas += 1
+        scale.status.replicas += 1
+        self.set_deployment_scale(name, namespace, scale)
 
     def scale_down_deployment_entity(self, name: str, namespace: str):
-        deployment_configs = self.dyn_client.resources.get(api_version='apps.openshift.io/v1', kind='DeploymentConfig')
-        replicas = None
-        dc = deployment_configs.get(name, namespace)
-        if dc:
-            replicas = dc.spec.replicas
-        if replicas:
-            replicas -= 1
-            self._patch_scale_dict['spec']['replicas'] = replicas
-            deployment_configs.patch(body=self._patch_scale_dict, name=name, namespace=namespace)
+        scale = self.get_deployment_scale(name, namespace)
+        if scale.spec.replicas is None or not scale.spec.replicas:
+            scale.spec.replicas = 0
+        else:
+            scale.spec.replicas -= 1
+        if scale.status.replicas:
+            scale.status.replicas -= 1
+        self.set_deployment_scale(name, namespace, scale)
 
     def get_deployment_entity_pod_selector_labels(self, name: str, namespace: str) -> dict:
-        deployment_configs = self.dyn_client.resources.get(api_version='apps.openshift.io/v1', kind='DeploymentConfig')
-        return deployment_configs.get(name=name, namespace=namespace).spec.selector
+        deployment = self.get_deployment_entity(name, namespace)
+        return deployment.spec.selector.match_labels if deployment else None
 
-    # TODO: check that body is dictionary
     def patch_namespaced_deployment_entity(self, name: str, namespace: str, body):
-        deployment_configs = self.dyn_client.resources.get(api_version='apps.openshift.io/v1', kind='DeploymentConfig')
-        deployment_configs.patch(name=name, namespace=namespace, body=body)
+        self.k8s_apps_v1_client.patch_namespaced_deployment(
+            name, namespace, body)
 
     def get_deployment_entity_ready_replicas(self, deployment):
-        return deployment.status.readyReplicas
+        return deployment.status.ready_replicas
 
     def get_deployment_entity_unavailable_replicas(self, deployment):
-        return deployment.status.unavailableReplicas
+        return deployment.status.unavailable_replicas
 
     def create_deployment_entity(self, body, namespace: str):
-        return self.dyn_client.resources.get(api_version='apps.openshift.io/v1', kind='DeploymentConfig') \
-            .create(body=body, namespace=namespace)
+        return self.k8s_apps_v1_client.create_namespaced_deployment(namespace=namespace, body=body)
 
     def delete_deployment_entity(self, name: str, namespace: str):
-        return self.dyn_client.resources.get(api_version='apps.openshift.io/v1', kind='DeploymentConfig') \
-            .delete(name=name, namespace=namespace)
+        return self.k8s_apps_v1_client.delete_namespaced_deployment(name=name, namespace=namespace)

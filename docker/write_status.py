@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from PlatformLibrary import PlatformLibrary
+import os
+import re
+import sys
 from datetime import datetime
 from enum import Enum
-import os
-import sys
-import re
+
+from PlatformLibrary import PlatformLibrary
+
 
 class CustomResourceStatusResolver:
     def __init__(self, **kwargs):

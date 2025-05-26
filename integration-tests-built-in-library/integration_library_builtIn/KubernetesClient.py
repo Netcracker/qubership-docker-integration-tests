@@ -13,14 +13,12 @@
 # limitations under the License.
 
 from kubernetes import client
-from openshift.dynamic import DynamicClient
 
 
 class KubernetesClient(object):
     def __init__(self, api_client):
         self.api_client = api_client
         self.k8s_apps_v1_client = client.AppsV1Api(api_client)
-        self.dyn_client: DynamicClient = DynamicClient(self.api_client)
 
     def get_deployment_entity(self, name: str, namespace: str):
         return self.k8s_apps_v1_client.read_namespaced_deployment(name, namespace)

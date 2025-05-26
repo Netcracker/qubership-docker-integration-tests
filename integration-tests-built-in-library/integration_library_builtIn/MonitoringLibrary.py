@@ -16,12 +16,10 @@ import json
 
 import requests
 import urllib3
-
 from PlatformLibrary import PlatformLibrary
-
 from requests.auth import HTTPBasicAuth
-
 from robot.libraries.BuiltIn import BuiltIn
+
 
 class MonitoringLibrary(object):
     """This Robot Framework library provides access to the Prometheus API for working with rules and the ability to
