@@ -12,8 +12,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
 import importlib.util
+import os
 
 
 def create_exclude_tags_robot_command(tags: list) -> str:
@@ -54,4 +54,3 @@ def resolve_robot_tags(start_directory="./tests", tags_resolver_module="tags_exc
 
 
 resolve_robot_tags()
-

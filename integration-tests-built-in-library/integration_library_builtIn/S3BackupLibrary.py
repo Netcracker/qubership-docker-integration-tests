@@ -14,6 +14,7 @@
 
 from s3_storage import S3Client, S3FileSystem
 
+
 class S3BackupLibrary(object):
 
     def __init__(self, url: str, bucket: str, key_id: str, key_secret: str, ssl_verify=False):
