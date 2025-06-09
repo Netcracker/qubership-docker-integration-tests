@@ -14,4 +14,4 @@ pyjwt==2.4.0
 deprecated==1.2.18
 boto3==1.35.79
 botocore==1.35.79
-idna==3.7
+idna==3.10
