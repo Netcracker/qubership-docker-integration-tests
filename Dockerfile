@@ -25,7 +25,6 @@ RUN \
         apk-tools \
         py3-yaml \
         ca-certificates \
-        openssl
     # Clean up
     && rm -rf /var/cache/apk/*
 
