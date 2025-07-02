@@ -23,7 +23,7 @@ RUN \
         ttyd \
         build-base \
         apk-tools \
-        py3-yaml
+        py3-yaml \
     # Clean up
     && rm -rf /var/cache/apk/*
 
