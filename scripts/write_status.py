@@ -122,7 +122,7 @@ class Condition:
                 "reason": self.reason,
                 "status": status_value,
                 "type": self.type.value,
-                "lastTransitionTime": datetime.utcnow().isoformat()[:-3]+'Z'}
+                "lastTransitionTime": datetime.now(datetime.UTC).isoformat()[:-3]+'Z'}
 
     def generate_condition_state(self):
         if self.is_in_progress:

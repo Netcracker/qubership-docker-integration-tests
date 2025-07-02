@@ -71,6 +71,7 @@ case $1 in
     excluded_tags=""
     if [[ ${IS_TAGS_RESOLVER_ENABLED} == "true" ]]; then
         create_tags_resolver_array
+        echo "Included tags: ${TAGS}"
         echo "Excluded tags: ${tags_resolver_array[0]}"
         echo ${tags_resolver_array[1]}  # print all excluded tags with matched reason
         excluded_tags=${tags_resolver_array[0]}
