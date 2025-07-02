@@ -27,7 +27,7 @@ from OpenShiftClient import OpenShiftClient
 
 def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):
     try:
-        config.load_incluster_config()
+        config.load_kube_config()
         return kubernetes.client.ApiClient()
     except config.ConfigException:
         return kubernetes.config.new_client_from_config(config_file=config_file,
