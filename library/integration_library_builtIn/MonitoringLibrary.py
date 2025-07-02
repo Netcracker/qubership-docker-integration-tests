@@ -20,6 +20,8 @@ from PlatformLibrary import PlatformLibrary
 from requests.auth import HTTPBasicAuth
 from robot.libraries.BuiltIn import BuiltIn
 
+requests.packages.urllib3.disable_warnings()
+
 
 class MonitoringLibrary(object):
     """This Robot Framework library provides access to the Prometheus API for working with rules and the ability to

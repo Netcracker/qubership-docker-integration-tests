@@ -24,6 +24,8 @@ from robot.api import logger
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
+requests.packages.urllib3.disable_warnings()
+
 
 class OAuthLibrary(object):
     """
