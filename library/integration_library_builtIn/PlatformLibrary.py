@@ -27,7 +27,7 @@ from OpenShiftClient import OpenShiftClient
 
 def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):
     try:
-        config.load_kube_config()
+        config.load_incluster_config()
         return kubernetes.client.ApiClient()
     except config.ConfigException:
         return kubernetes.config.new_client_from_config(config_file=config_file,
@@ -106,12 +106,8 @@ class PlatformLibrary(object):
                                                         context=context,
                                                         persist_config=persist_config)
 
-        if managed_by_operator == "true":
-            self.platform_client = KubernetesClient(self.k8s_api_client)
-            self.k8s_apps_v1_client = self.platform_client.k8s_apps_v1_client
-        else:
-            self.platform_client = OpenShiftClient(self.k8s_api_client)
-            self.k8s_apps_v1_client = client.AppsV1Api(self.k8s_api_client)
+        self.platform_client = KubernetesClient(self.k8s_api_client)
+        self.k8s_apps_v1_client = self.platform_client.k8s_apps_v1_client
 
         self.k8s_core_v1_client = client.CoreV1Api(self.k8s_api_client)
         self.custom_objects_api = client.CustomObjectsApi(self.k8s_api_client)

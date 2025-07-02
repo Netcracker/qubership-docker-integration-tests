@@ -19,7 +19,7 @@ with open("README.md", "r") as fh:
 
 setuptools.setup(
     name="integration-tests-builtIn",
-    version="0.1.17",
+    version="0.2.0",
     author="framework_team",
     description="BuiltIn Robot Framework keywords source package",
     long_description=long_description,
