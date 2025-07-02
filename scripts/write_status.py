@@ -15,7 +15,7 @@
 import os
 import re
 import sys
-from datetime import datetime
+import datetime
 from enum import Enum
 
 from PlatformLibrary import PlatformLibrary
@@ -122,7 +122,7 @@ class Condition:
                 "reason": self.reason,
                 "status": status_value,
                 "type": self.type.value,
-                "lastTransitionTime": datetime.now(datetime.UTC).isoformat()[:-3]+'Z'}
+                "lastTransitionTime": datetime.datetime.now(datetime.UTC).isoformat()[:-3]+'Z'}
 
     def generate_condition_state(self):
         if self.is_in_progress:
