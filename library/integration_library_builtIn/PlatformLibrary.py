@@ -21,7 +21,7 @@ import urllib3
 import yaml
 from deprecated import deprecated
 from kubernetes import client, config
-from kubernetes.client import Configuration
+from kubernetes.client.configuration import Configuration
 from kubernetes.stream import stream
 from KubernetesClient import KubernetesClient
 from OpenShiftClient import OpenShiftClient
