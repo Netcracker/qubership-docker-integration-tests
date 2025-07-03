@@ -123,7 +123,7 @@ class Condition:
             "reason": self.reason,
             "status": status_value,
             "type": self.type.value,
-            "lastTransitionTime": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ%z")
+            "lastTransitionTime": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
         }
 
     def generate_condition_state(self):
