@@ -34,7 +34,8 @@ class OAuthLibrary(object):
 
     This is an example of import library with Identity Provider parameters.
 
-    | Library | OAuthLibrary | url=http://identity-management.namespace.svc | registration_token=<token> | username=username | password=password |
+    | Library | OAuthLibrary | url=http://identity-management.namespace.svc | registration_token=<token>
+    | username=username | password=password |
     """
 
     def __init__(self, url, registration_token, username, password, registration_endpoint="/register",

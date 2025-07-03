@@ -35,7 +35,10 @@ create_tags_resolver_array() {
         tags_resolver_script=${TAGS_RESOLVER_SCRIPT}
     fi
     tags_resolver_array=()
-    while IFS=";"; read -d ";" line; do
+    while
+        IFS=";"
+        read -d ";" line;
+    do
         tags_resolver_array+=($line)
     done < <(python ${tags_resolver_script})
 }
@@ -73,7 +76,7 @@ run-robot)
         create_tags_resolver_array
         echo "Included tags: ${TAGS}"
         echo "Excluded tags: ${tags_resolver_array[0]}"
-        echo ${tags_resolver_array[1]}  # print all excluded tags with matched reason
+        echo ${tags_resolver_array[1]} # print all excluded tags with matched reason
         excluded_tags=${tags_resolver_array[0]}
     fi
 
