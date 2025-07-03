@@ -1,0 +1,44 @@
+version: 2
+updates:
+- package-ecosystem: "github-actions"
+  directory: "/"
+  schedule:
+    interval: "monthly"
+  groups:
+    github-actions:
+      patterns:
+      - "*"
+  commit-message:
+    prefix: chore
+    prefix-development: chore
+    include: scope
+# Python/pip configurations
+- package-ecosystem: "pip"
+  directory: "/"
+  schedule:
+    interval: "monthly"
+  open-pull-requests-limit: 20
+  groups:
+    boto3:
+      patterns:
+      - "boto*"
+    robotframework:
+      patterns:
+      - "robotframework*"
+  commit-message:
+    prefix: chore
+    prefix-development: chore
+    include: scope
+# Docker configurations
+- package-ecosystem: "docker"
+  directory: "/"
+  schedule:
+    interval: "monthly"
+  groups:
+    docker:
+      patterns:
+      - "*"
+  commit-message:
+    prefix: chore
+    prefix-development: chore
+    include: scope

@@ -12,26 +12,36 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import sys
 import time
-import yaml
 from typing import List
 
 import kubernetes
 import urllib3
-from kubernetes import client
-from kubernetes import config
-from kubernetes.stream import stream
-from openshift.dynamic import ResourceInstance
+import yaml
 from deprecated import deprecated
-
+from kubernetes import client, config
+from kubernetes.client.configuration import Configuration
+from kubernetes.stream import stream
 from KubernetesClient import KubernetesClient
 from OpenShiftClient import OpenShiftClient
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 
 def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):
     try:
-        config.load_incluster_config()
-        return kubernetes.client.ApiClient()
+        client_configuration = None
+        if sys.version_info >= (3, 13):
+            # https://docs.python.org/3/whatsnew/3.13.html#ssl
+            # Kubernetes client issue
+            # https://github.com/kubernetes-client/python/issues/2394#issuecomment-2884974440
+            client_configuration = Configuration()
+            client_configuration.verify_ssl = False
+        
+        config.load_incluster_config(client_configuration)
+
+        return kubernetes.client.ApiClient(configuration=client_configuration)
     except config.ConfigException:
         return kubernetes.config.new_client_from_config(config_file=config_file,
                                                         context=context,
@@ -39,7 +49,7 @@ def get_kubernetes_api_client(config_file=None, context=None, persist_config=Tru
 
 
 class PlatformLibrary(object):
-    """This is a Robot Framework library to communicate with Kubernetes/OpenShift platform.
+    """This is a Robot Framework library to communicate with Kubernetes platform.
 
     = Table of contents =
 
@@ -52,21 +62,13 @@ class PlatformLibrary(object):
 
     = Usage =
 
-    This library uses Kubernetes or OpenShift clients to communicate with Kubernetes/OpenShift API servers.
-    The OpenShift API extends a Kubernetes API. Since Custom Resource Definition feature is available for Kubernetes
-    (OpenShift 3.11) the OpenShift provides own custom entities such as `Deployment Config` or `Route` by CRD.
-    It is supposed that there are no custom OpenShift entities if your service is installed by Kubernetes Operator or
-    Helm chart directly. So in this case only Kubernetes entities are presented and therefore PlatformLibrary uses
-    Kubernetes client only. If your tested service uses custom OpenShift entities (for example, `Deployment Config`) and
-    is not installed by Helm chart (for example, by DVM) you can set parameter `managed_by_operator` to `false` (or do
-    nothing because this is default variable value) - PlatformLibrary will use OpenShift client for custom OpenShift
-    entities.
+    This library uses Kubernetes client to communicate with Kubernetes API servers.
+    The library supports both standard Kubernetes resources and custom resources through the CustomObjectsApi.
 
     = Client Versions =
 
-    *Note!* `PlatformLibrary` uses particular versions of `kubernetes` and `openshift` python libraries which do not
-    guaranteed backward capabilities. This library is used with OpenShift 3.11 and higher or with Kubernetes 1.16 and
-    higher.
+    *Note!* `PlatformLibrary` uses particular versions of `kubernetes` python library which do not
+    guaranteed backward capabilities. This library is used with Kubernetes 1.16 and higher.
 
     = Examples =
 
@@ -99,10 +101,10 @@ class PlatformLibrary(object):
         | Library   | PlatformLibrary | managed_by_operator="false" | OpenShift client will be used  |
         | Library   | PlatformLibrary |                             | OpenShift client will be used  |
 
-        To login to Kubernetes/OpenShift API server the `PlatformLibrary` tries to use `in-cluster` config by default.
+        To login to Kubernetes API server the `PlatformLibrary` tries to use `in-cluster` config by default.
         It means that the library tries to read Kubernetes service account token in the current Kubernetes pod with
         trusted certs. If files do not exist default `kubeconfig` (`~/.kube/config`) setting is used. There is an
-        ability to use custom `kubeconfig` file to get Kubernetes/OpenShift token.
+        ability to use custom `kubeconfig` file to get Kubernetes token.
 
         Examples of custom Kubernetes config file usage:
         | =Setting= | =Value=         | =Value=                            | =Value=               | =Value=              | =Comment=                                                                                                  |
@@ -111,43 +113,19 @@ class PlatformLibrary(object):
         | Library   | PlatformLibrary | config_file=/mnt/kubeconfig/config |                       |                      | Custom config file will be used with current context for provided file, GCP token will be refreshed        |
         | Library   | PlatformLibrary |                                    |                       |                      | Default config file will be used with current context for provided file, GCP token will be refreshed       |
         """
-        urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
         self.k8s_api_client = get_kubernetes_api_client(config_file=config_file,
                                                         context=context,
                                                         persist_config=persist_config)
 
-        if managed_by_operator == "true":
-            self.platform_client = KubernetesClient(self.k8s_api_client)
-            self.k8s_apps_v1_client = self.platform_client.k8s_apps_v1_client
-        else:
-            self.platform_client = OpenShiftClient(self.k8s_api_client)
-            self.k8s_apps_v1_client = client.AppsV1Api(self.k8s_api_client)
+        self.platform_client = KubernetesClient(self.k8s_api_client)
+        self.k8s_apps_v1_client = self.platform_client.k8s_apps_v1_client
 
         self.k8s_core_v1_client = client.CoreV1Api(self.k8s_api_client)
         self.custom_objects_api = client.CustomObjectsApi(self.k8s_api_client)
         self.networking_api = client.NetworkingV1Api(self.k8s_api_client)
 
-    def _get_resource(self,
-                      api_version: str,
-                      kind: str,
-                      label_selector: str = None,
-                      namespace: str = None,
-                      **kwargs) -> List[ResourceInstance]:
-        """
-        Returns specified resources by project/namespace.
-        If resource API or resource not found, returns empty list.
-
-        :param api_version: OpenShift API group version.
-        :param kind: OpenShift API kind.
-        :param label_selector: Comma-separated labels selector in format key=value
-        :param namespace: Namespace name to find resources
-        """
-
-        return self.platform_client.dyn_client.resources.get(api_version=api_version, kind=kind) \
-            .get(namespace=namespace, label_selector=label_selector).items
-
-    def get_custom_resources(self, api_version: str, kind: str, namespace: str) -> List[ResourceInstance]:
+    def get_custom_resources(self, api_version: str, kind: str, namespace: str) -> List[dict]:
         """
         Returns custom resources by project/namespace.
         :param api_version: ApiVersion to find resource
@@ -157,9 +135,15 @@ class PlatformLibrary(object):
         Example:
         | Get Custom Resources | v1alpha1 | integreatly.org | prometheus-operator |
         """
-        return self._get_resource(api_version=api_version, kind=kind, namespace=namespace)
+        group, version = api_version.split('/')
+        return self.custom_objects_api.list_namespaced_custom_object(
+            group=group,
+            version=version,
+            namespace=namespace,
+            plural=kind.lower() + 's'
+        )['items']
 
-    def get_custom_resource(self, api_version: str, kind: str, namespace: str, name: str) -> ResourceInstance:
+    def get_custom_resource(self, api_version: str, kind: str, namespace: str, name: str) -> dict:
         """
         Returns custom resource by name and project/namespace.
         :param api_version: ApiVersion to find resource
@@ -170,9 +154,14 @@ class PlatformLibrary(object):
         Example:
         | Get Custom Resource | v1alpha1 | integreatly.org | prometheus-operator | test_dashboard |
         """
-        ret = self.get_custom_resources(api_version, kind, namespace)
-        items = [item for item in ret if name == item.metadata.name]
-        return items[0]
+        group, version = api_version.split('/')
+        return self.custom_objects_api.get_namespaced_custom_object(
+            group=group,
+            version=version,
+            namespace=namespace,
+            plural=kind.lower() + 's',
+            name=name
+        )
 
     def get_ingress_api_version(self):
         """
@@ -183,7 +172,7 @@ class PlatformLibrary(object):
         """
         return self.networking_api.get_api_resources().group_version
 
-    def get_ingresses(self, namespace: str) -> List[ResourceInstance]:
+    def get_ingresses(self, namespace: str) -> List[dict]:
         """
         Returns list of Ingress objects in specified project/namespace.
 
@@ -192,10 +181,9 @@ class PlatformLibrary(object):
         Example:
         | Get Ingresses | cassandra |
         """
-        api_version = self.get_ingress_api_version()
-        return self._get_resource(api_version=api_version, kind='Ingress', namespace=namespace)
+        return self.networking_api.list_namespaced_ingress(namespace).items
 
-    def get_ingress(self, name: str, namespace: str) -> ResourceInstance:
+    def get_ingress(self, name: str, namespace: str) -> dict:
         """
         Returns ingress by name in specified project/namespace.
 
@@ -205,9 +193,7 @@ class PlatformLibrary(object):
         Example:
         | Get Ingress | cassandra-ingress | cassandra |
         """
-        ret = self.get_ingresses(namespace)
-        items = [item for item in ret if name == item.metadata.name]
-        return items[0]
+        return self.networking_api.read_namespaced_ingress(name, namespace)
 
     def get_ingress_url(self, name, namespace):
         """Returns url of given Ingress in project/namespace.
@@ -221,7 +207,7 @@ class PlatformLibrary(object):
         ret = self.get_ingress(name, namespace)
         return "http://" + ret.spec.rules[0].host
 
-    def get_routes(self, namespace: str) -> List[ResourceInstance]:
+    def get_routes(self, namespace: str) -> List[dict]:
         """
         Returns list of routes in specified project/namespace.
 
@@ -231,9 +217,14 @@ class PlatformLibrary(object):
         Example:
         | Get Routes | cassandra |
         """
-        return self._get_resource(api_version='route.openshift.io/v1', kind='Route', namespace=namespace)
+        return self.custom_objects_api.list_namespaced_custom_object(
+            group='route.openshift.io',
+            version='v1',
+            namespace=namespace,
+            plural='routes'
+        )['items']
 
-    def get_route(self, name: str, namespace: str) -> ResourceInstance:
+    def get_route(self, name: str, namespace: str) -> dict:
         """
         Returns route by name in specified project/namespace.
 
@@ -244,9 +235,13 @@ class PlatformLibrary(object):
         Example:
         | Get Route | cassandra-route | cassandra |
         """
-        ret = self.get_routes(namespace)
-        items = [item for item in ret if name == item.metadata.name]
-        return items[0]
+        return self.custom_objects_api.get_namespaced_custom_object(
+            group='route.openshift.io',
+            version='v1',
+            namespace=namespace,
+            plural='routes',
+            name=name
+        )
 
     def get_route_url(self, name, namespace):
         """Gets url of given Route in project/namespace.
@@ -347,7 +342,7 @@ class PlatformLibrary(object):
         """
         return self.custom_objects_api.delete_namespaced_custom_object(group, version, namespace, plural, name)
 
-    def get_daemon_sets(self, namespace: str) -> List[ResourceInstance]:
+    def get_daemon_sets(self, namespace: str) -> List[dict]:
         """
         Returns list of daemon sets in specified project/namespace.
 
@@ -357,9 +352,14 @@ class PlatformLibrary(object):
         Example:
         | Get Daemon Sets | prometheus-operator |
         """
-        return self._get_resource(api_version='apps/v1', kind='DaemonSet', namespace=namespace)
+        return self.custom_objects_api.list_namespaced_custom_object(
+            group='apps',
+            version='v1',
+            namespace=namespace,
+            plural='daemonsets'
+        )['items']
 
-    def get_daemon_set(self, name: str, namespace: str) -> ResourceInstance:
+    def get_daemon_set(self, name: str, namespace: str) -> dict:
         """
         Returns daemon set by name in specified project/namespace.
 
@@ -370,9 +370,13 @@ class PlatformLibrary(object):
         Example:
         | Get Daemon Set | node-exporter | prometheus-operator |
         """
-        ret = self.get_daemon_sets(namespace)
-        items = [item for item in ret if name == item.metadata.name]
-        return items[0]
+        return self.custom_objects_api.get_namespaced_custom_object(
+            group='apps',
+            version='v1',
+            namespace=namespace,
+            plural='daemonsets',
+            name=name
+        )
 
     def get_service(self, name: str, namespace: str):
         """Returns Kubernetes `Service` configuration as JSON object.
@@ -421,7 +425,8 @@ class PlatformLibrary(object):
         Example:
         | Get Service Selector | cassandra-dc-dc1 | cassandra |
         """
-        service = self.k8s_core_v1_client.read_namespaced_service(name, namespace)
+        service = self.k8s_core_v1_client.read_namespaced_service(
+            name, namespace)
         return service.spec.selector
 
     def get_deployment_entity(self, name: str, namespace: str):
@@ -531,7 +536,8 @@ class PlatformLibrary(object):
         """
         counter = 0
         for deployment_entity_name in deployment_entity_names:
-            deployment_entity = self.get_deployment_entity(deployment_entity_name, namespace)
+            deployment_entity = self.get_deployment_entity(
+                deployment_entity_name, namespace)
             if not deployment_entity.status.replicas:
                 counter += 1
         return counter
@@ -596,14 +602,14 @@ class PlatformLibrary(object):
         """
         counter = 0
         for deployment_entity_name in deployment_entity_names:
-            deployment_entity = self.get_deployment_entity(deployment_entity_name, namespace)
+            deployment_entity = self.get_deployment_entity(
+                deployment_entity_name, namespace)
             if not self.platform_client.get_deployment_entity_unavailable_replicas(deployment_entity) \
                     and deployment_entity.status.replicas:
                 counter += 1
         return counter
 
     def create_deployment_entity(self, body, namespace: str):
-
         """Creates `deployment` (Kubernetes client) or `deployment config` (OpenShift client) with body configuration
         as JSON object in specified project/namespace.
 
@@ -613,7 +619,6 @@ class PlatformLibrary(object):
         return self.platform_client.create_deployment_entity(body=body, namespace=namespace)
 
     def create_deployment_entity_from_file(self, file_path, namespace: str):
-
         """Creates `deployment` (Kubernetes client) or `deployment config` (OpenShift client) by specified
         file path in project/namespace. The file must be in the yaml format.
 
@@ -625,7 +630,6 @@ class PlatformLibrary(object):
         return self.create_deployment_entity(body=body, namespace=namespace)
 
     def delete_deployment_entity(self, name: str, namespace: str):
-
         """Deletes `deployment` (Kubernetes client) or `deployment config` (OpenShift client) by specified
         name in project/namespace.
 
@@ -652,9 +656,11 @@ class PlatformLibrary(object):
         direction = direction.lower()
 
         if direction in ('"up"', '"down"', "'up'", "'down'"):
-            raise Exception(f'set direction parameter (up or down) without quote symbols ""')
+            raise Exception(
+                f'set direction parameter (up or down) without quote symbols ""')
         elif direction not in ("up", "down"):
-            raise Exception(f'direction argument should be "up" or "down" but {direction} is given')
+            raise Exception(
+                f'direction argument should be "up" or "down" but {direction} is given')
 
         if isinstance(deployment_entity_names, str):
             deployment_entity_names = list(deployment_entity_names.split(' '))
@@ -685,11 +691,14 @@ class PlatformLibrary(object):
         | Scale Down Deployment Entities By Service Name | elasticsearch | elasticsearch-service | with_check=True |
         | Scale Down Deployment Entities By Service Name | elasticsearch | elasticsearch-service |
         """
-        deployment_entity_names = self.get_deployment_entity_names_by_service_name(service_name, namespace)
+        deployment_entity_names = self.get_deployment_entity_names_by_service_name(
+            service_name, namespace)
         for deployment_entity_name in deployment_entity_names:
-            self.set_replicas_for_deployment_entity(deployment_entity_name, namespace, replicas=0)
+            self.set_replicas_for_deployment_entity(
+                deployment_entity_name, namespace, replicas=0)
         if with_check:
-            self.check_service_is_scaled(deployment_entity_names, namespace, direction="down", timeout=timeout)
+            self.check_service_is_scaled(
+                deployment_entity_names, namespace, direction="down", timeout=timeout)
 
     def scale_up_deployment_entities_by_service_name(self,
                                                      service_name: str,
@@ -715,15 +724,19 @@ class PlatformLibrary(object):
         replicas = kwargs.get('replicas', None)
         if replicas is not None:
             replicas = int(replicas)
-        deployment_entity_names = self.get_deployment_entity_names_by_service_name(service_name, namespace)
+        deployment_entity_names = self.get_deployment_entity_names_by_service_name(
+            service_name, namespace)
         for deployment_entity_name in deployment_entity_names:
             if replicas is not None:
-                self.set_replicas_for_deployment_entity(deployment_entity_name, namespace, replicas=replicas)
+                self.set_replicas_for_deployment_entity(
+                    deployment_entity_name, namespace, replicas=replicas)
             else:
-                self.scale_up_deployment_entity(deployment_entity_name, namespace)
+                self.scale_up_deployment_entity(
+                    deployment_entity_name, namespace)
         if with_check:
             direction = "down" if replicas == 0 else "up"
-            self.check_service_is_scaled(deployment_entity_names, namespace, direction=direction, timeout=timeout)
+            self.check_service_is_scaled(
+                deployment_entity_names, namespace, direction=direction, timeout=timeout)
 
     def get_deployment_entities_count_for_service(self, namespace: str, service: str, label: str = 'clusterName'):
         """Returns number of `deployments` (Kubernetes client) or `deployment configs` (OpenShift client).
@@ -748,7 +761,8 @@ class PlatformLibrary(object):
         | Set Replicas For Deployment Entity | cassandra-backup-daemon | cassandra        | replicas=3 |
         | Set Replicas For Deployment Entity | monitoring-collector    | postgres-service |
         """
-        self.platform_client.set_replicas_for_deployment_entity(name, namespace, replicas)
+        self.platform_client.set_replicas_for_deployment_entity(
+            name, namespace, replicas)
 
     def scale_up_deployment_entity(self, name: str, namespace: str):
         """Increases by one number of replicas for found `deployment` (Kubernetes client) or `deployment config`
@@ -816,7 +830,8 @@ class PlatformLibrary(object):
         Example:
         | Get Pod Names For Deployment Entity | elasticsearch-1 | elasticsearch-cluster |
         """
-        matched_labels = self.get_deployment_entity_pod_selector_labels(deployment_entity_name, namespace)
+        matched_labels = self.get_deployment_entity_pod_selector_labels(
+            deployment_entity_name, namespace)
         pods = self.get_pods(namespace)
         if not pods or not matched_labels:
             return []
@@ -848,7 +863,8 @@ class PlatformLibrary(object):
         Example:
         | Patch Namespaced Deployment Entity | elasticsearch-1 | elasticsearch-cluster | <part_of_deployment_entity_spec> |
         """
-        self.platform_client.patch_namespaced_deployment_entity(name, namespace, body)
+        self.platform_client.patch_namespaced_deployment_entity(
+            name, namespace, body)
 
     def get_environment_variables_for_deployment_entity_container(self,
                                                                   name: str,
@@ -889,21 +905,24 @@ class PlatformLibrary(object):
         | Set Environment Variables For Deployment Entity Container | elasticsearch-1 | elasticsearch-cluster | elasticsearch | <dictionary_of_variables_to_change> |
         """
         entity = self.get_deployment_entity(name, namespace)
-        self._prepare_entity_with_environment_variables_for_container(entity, container_name, variables_to_change)
+        self._prepare_entity_with_environment_variables_for_container(
+            entity, container_name, variables_to_change)
         self.patch_namespaced_deployment_entity(name, namespace, entity)
 
     def _get_environment_variables_for_container(self,
                                                  entity,
                                                  container_name: str,
                                                  variable_names: list) -> dict:
-        environments = self._get_environments_for_container(entity.spec.template.spec.containers, container_name)
+        environments = self._get_environments_for_container(
+            entity.spec.template.spec.containers, container_name)
         return self._get_env_variables(environments, variable_names)
 
     def _prepare_entity_with_environment_variables_for_container(self,
                                                                  entity,
                                                                  container_name: str,
                                                                  variables_to_update: dict):
-        environments = self._get_environments_for_container(entity.spec.template.spec.containers, container_name)
+        environments = self._get_environments_for_container(
+            entity.spec.template.spec.containers, container_name)
 
         def set_new_variables(dicts: list, params: dict):
             for dictionary in dicts:
@@ -988,7 +1007,8 @@ class PlatformLibrary(object):
         Example:
         | Get Stateful Set Replicas Count | cassandra1 | cassandra |
         """
-        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(name, namespace)
+        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(
+            name, namespace)
         return stateful_set.spec.replicas
 
     def get_stateful_set_ready_replicas_count(self, name: str, namespace: str) -> int:
@@ -1001,7 +1021,8 @@ class PlatformLibrary(object):
         Example:
         | Get Stateful Set Ready Replicas Count | cassandra1 | cassandra |
         """
-        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(name, namespace)
+        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(
+            name, namespace)
         return stateful_set.status.ready_replicas
 
     @deprecated(reason="Use get_active_stateful_sets_count")
@@ -1078,9 +1099,11 @@ class PlatformLibrary(object):
 
         direction = direction.lower()
         if direction in ('"up"', '"down"', "'up'", "'down'"):
-            raise Exception(f'set direction parameter (up or down) without quote symbols ""')
+            raise Exception(
+                f'set direction parameter (up or down) without quote symbols ""')
         elif direction not in ("up", "down"):
-            raise Exception(f'direction argument should be "up" or "down" but {direction} is given')
+            raise Exception(
+                f'direction argument should be "up" or "down" but {direction} is given')
 
         if isinstance(stateful_set_names, str):
             stateful_set_names = list(stateful_set_names.split(' '))
@@ -1110,9 +1133,11 @@ class PlatformLibrary(object):
         | Scale Down Stateful Sets By Service Name | cassandra | cassandra | with_check=True |
         | Scale Down Stateful Sets By Service Name | cassandra | cassandra |
         """
-        stateful_set_names = self.get_stateful_set_names_by_service_name(service_name, namespace)
+        stateful_set_names = self.get_stateful_set_names_by_service_name(
+            service_name, namespace)
         for stateful_set_name in stateful_set_names:
-            self.set_replicas_for_stateful_set(stateful_set_name, namespace, replicas=0)
+            self.set_replicas_for_stateful_set(
+                stateful_set_name, namespace, replicas=0)
         if with_check:
             self.check_service_of_stateful_sets_is_scaled(stateful_set_names, namespace, direction="down",
                                                           timeout=timeout)
@@ -1142,10 +1167,12 @@ class PlatformLibrary(object):
         replicas = kwargs.get('replicas', None)
         if replicas is not None:
             replicas = int(replicas)
-        stateful_set_names = self.get_stateful_set_names_by_service_name(service_name, namespace)
+        stateful_set_names = self.get_stateful_set_names_by_service_name(
+            service_name, namespace)
         for stateful_set_name in stateful_set_names:
             if replicas is not None:
-                self.set_replicas_for_stateful_set(stateful_set_name, namespace, replicas=replicas)
+                self.set_replicas_for_stateful_set(
+                    stateful_set_name, namespace, replicas=replicas)
             else:
                 self.scale_up_stateful_set(stateful_set_name, namespace)
         if with_check:
@@ -1163,7 +1190,8 @@ class PlatformLibrary(object):
         Example:
         | Get Stateful Set Pod Selector | cassandra0 | cassandra |
         """
-        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(name, namespace)
+        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(
+            name, namespace)
         return stateful_set.spec.selector.match_labels
 
     def get_stateful_set_names_by_selector(self, namespace: str, selector: dict) -> list:
@@ -1204,9 +1232,11 @@ class PlatformLibrary(object):
         | Set Replicas For Stateful Set | cassandra-dc-dc1 | cassandra | replicas=2 |
         | Set Replicas For Stateful Set | cassandra-dc-dc1 | cassandra |
         """
-        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(name, namespace)
+        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(
+            name, namespace)
         scale.spec.replicas = replicas
-        self.k8s_apps_v1_client.patch_namespaced_stateful_set(name, namespace, scale)
+        self.k8s_apps_v1_client.patch_namespaced_stateful_set(
+            name, namespace, scale)
 
     def scale_up_stateful_set(self, name: str, namespace: str):
         """Increases by one number of replicas for found `Stateful Set`.
@@ -1219,12 +1249,14 @@ class PlatformLibrary(object):
         Example:
         | Scale Up Stateful Set | cassandra0 | cassandra |
         """
-        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(name, namespace)
+        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(
+            name, namespace)
         if scale.spec.replicas is None:
             scale.spec.replicas = 1
         else:
             scale.spec.replicas += 1
-        self.k8s_apps_v1_client.patch_namespaced_stateful_set(name, namespace, scale)
+        self.k8s_apps_v1_client.patch_namespaced_stateful_set(
+            name, namespace, scale)
 
     def scale_down_stateful_set(self, name: str, namespace: str):
         """Decreases by one number of replicas for found `Stateful Set`.
@@ -1237,12 +1269,14 @@ class PlatformLibrary(object):
         Example:
         | Scale Down Stateful Set | cassandra0 | cassandra |
         """
-        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(name, namespace)
+        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(
+            name, namespace)
         if not scale.spec.replicas:
             scale.spec.replicas = 0
         else:
             scale.spec.replicas -= 1
-        self.k8s_apps_v1_client.patch_namespaced_stateful_set(name, namespace, scale)
+        self.k8s_apps_v1_client.patch_namespaced_stateful_set(
+            name, namespace, scale)
 
     def get_pod_names_for_stateful_set(self, name: str, namespace: str) -> list:
         """Returns expected pod names for a `Stateful Set`.
@@ -1255,7 +1289,8 @@ class PlatformLibrary(object):
         Example:
         | Get Pod Names For Stateful Set | cassandra0 | cassandra |
         """
-        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(name, namespace)
+        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(
+            name, namespace)
         return [f'{name}-{number}' for number in range(stateful_set.status.replicas)]
 
     def get_environment_variables_for_stateful_set_container(self,
@@ -1297,8 +1332,10 @@ class PlatformLibrary(object):
         | Set Environment_Variables For Stateful Set Container | cassandra0 | cassandra | cassandra | <dictionary_of_environment_variables_to_change> |
         """
         entity = self.get_stateful_set(name, namespace)
-        self._prepare_entity_with_environment_variables_for_container(entity, container_name, variables_to_change)
-        self.k8s_apps_v1_client.patch_namespaced_stateful_set(name, namespace, entity)
+        self._prepare_entity_with_environment_variables_for_container(
+            entity, container_name, variables_to_change)
+        self.k8s_apps_v1_client.patch_namespaced_stateful_set(
+            name, namespace, entity)
 
     def get_pod(self, name: str, namespace: str):
         """Returns the particular pod configuration as JSON object.
@@ -1396,7 +1433,8 @@ class PlatformLibrary(object):
         Example:
         | Get Deployment Replicas | streaming-platform | streaming-service |
         """
-        deployment_list = self.platform_client.get_active_deployment_entities_for_service(namespace, service, label)
+        deployment_list = self.platform_client.get_active_deployment_entities_for_service(
+            namespace, service, label)
         replicas_count = 0
         for deployment in deployment_list:
             replicas_count += deployment.spec.replicas
@@ -1421,8 +1459,10 @@ class PlatformLibrary(object):
         pods = self.get_pods_by_service_name(service, namespace)
         result = {}
         for pod in pods:
-            environments = self._get_environments_for_container(pod.spec.containers, container_name)
-            env_variables = self._get_env_variables(environments, variable_names)
+            environments = self._get_environments_for_container(
+                pod.spec.containers, container_name)
+            env_variables = self._get_env_variables(
+                environments, variable_names)
             result[pod.metadata.labels.get('name', '')] = env_variables
         return result
 
@@ -1456,7 +1496,8 @@ class PlatformLibrary(object):
         Example:
         | Delete Pod By Pod Name | streaming-platform-1-kj8sf | streaming-platform-service |
         """
-        self.k8s_core_v1_client.delete_namespaced_pod(namespace=namespace, name=name, grace_period_seconds=grace_period)
+        self.k8s_core_v1_client.delete_namespaced_pod(
+            namespace=namespace, name=name, grace_period_seconds=grace_period)
 
     def delete_pod_by_pod_ip(self, pod_ip: str, namespace: str):
         """ Deletes `Pod` from given project/namespace by ip of `pod`.
@@ -1569,10 +1610,10 @@ class PlatformLibrary(object):
         | Create Secret | elasticsearch | secret_body |
         """
         return self.k8s_core_v1_client.create_namespaced_secret(namespace, body)
-    
+
     def patch_secret(self, name, namespace, body):
         """Update secret in specified project/namespace.
-		:param name: the secret's name
+                :param name: the secret's name
         :param namespace: the secret's namespace
         :param body: the JSON schema of the Secret to create.
         Example:
@@ -1633,7 +1674,8 @@ class PlatformLibrary(object):
             stateful_set = self.get_stateful_set(resource_name, namespace)
             return self.get_image(stateful_set, resource_container_name)
         else:
-            raise Exception(f'The type [{resource_type}] is not supported yet.')
+            raise Exception(
+                f'The type [{resource_type}] is not supported yet.')
 
     def get_dd_images_from_config_map(self, config_map_name, namespace):
         config_map = self.get_config_map(config_map_name, namespace)

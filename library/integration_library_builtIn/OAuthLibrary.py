@@ -24,6 +24,8 @@ from robot.api import logger
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
+requests.packages.urllib3.disable_warnings()
+
 
 class OAuthLibrary(object):
     """
@@ -53,6 +55,7 @@ class OAuthLibrary(object):
         """
         Registers client with specified name in Identity Provider.
         :param client_name: the name of new client
+        :scope: the scope of new client
 
         Example:
         | Register Client | elasticsearch-integration-tests-client |
