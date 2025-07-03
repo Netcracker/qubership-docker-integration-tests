@@ -12,14 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import os
-import logging
-import time
 import json
+import logging
+import os
+import time
 
 import boto3
-from botocore.exceptions import ClientError
 from botocore import config
+from botocore.exceptions import ClientError
 from FileSystemS3 import FileSystem
 
 

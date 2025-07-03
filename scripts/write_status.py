@@ -12,12 +12,14 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from PlatformLibrary import PlatformLibrary
-from datetime import datetime
-from enum import Enum
 import os
-import sys
 import re
+import sys
+import datetime
+from enum import Enum
+
+from PlatformLibrary import PlatformLibrary
+
 
 class CustomResourceStatusResolver:
     def __init__(self, **kwargs):
@@ -116,11 +118,13 @@ class Condition:
         status_value = self.status.value
         if str2bool(os.getenv("IS_STATUS_BOOLEAN", "false")):
             status_value = str2bool(status_value)
-        return {"message": self.message,
-                "reason": self.reason,
-                "status": status_value,
-                "type": self.type.value,
-                "lastTransitionTime": datetime.utcnow().isoformat()[:-3]+'Z'}
+        return {
+            "message": self.message,
+            "reason": self.reason,
+            "status": status_value,
+            "type": self.type.value,
+            "lastTransitionTime": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+        }
 
     def generate_condition_state(self):
         if self.is_in_progress:

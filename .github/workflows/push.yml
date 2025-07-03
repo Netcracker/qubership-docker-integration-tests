@@ -44,7 +44,7 @@ jobs:
       matrix:
         component:
         - name: qubership-docker-integration-tests
-          file: docker/Dockerfile
+          file: Dockerfile
           context: .
     runs-on: ubuntu-latest
     name: ${{ matrix.component.name }}
