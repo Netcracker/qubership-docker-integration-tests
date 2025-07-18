@@ -1,4 +1,4 @@
-FROM python:3.13.5-alpine3.21
+FROM python:3.13.5-alpine3.22
 
 ENV ROBOT_HOME=/opt/robot \
     PYTHONPATH=/usr/local/lib/python3.13/site-packages/integration_library_builtIn \
@@ -29,7 +29,7 @@ RUN \
     && rm -rf /var/cache/apk/*
 
 RUN \
-    # Add unprivileged user
+    # Add an unprivileged user
     groupadd -r robot --gid=${GROUP_ID} \
     && useradd -s /bin/bash -r -g robot --uid=${USER_ID} robot \
     && usermod -a -G 0 robot \
