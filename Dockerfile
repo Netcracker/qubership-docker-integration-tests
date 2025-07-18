@@ -1,3 +1,4 @@
+# hadolint global ignore=DL3013,DL3018
 FROM python:3.13.5-alpine3.22
 
 ENV ROBOT_HOME=/opt/robot \
@@ -34,21 +35,16 @@ RUN \
     && useradd -s /bin/bash -r -g robot --uid=${USER_ID} robot \
     && usermod -a -G 0 robot \
     # Install dependencies
-    && python3 -m pip install --upgrade \
+    && python3 -m pip install --no-cache-dir --upgrade \
         pip \
         setuptools \
-    && python3 -m pip install -r ${ROBOT_HOME}/requirements.txt \
+    && python3 -m pip install --no-cache-dir -r ${ROBOT_HOME}/requirements.txt \
     && python3 -m pip install --no-cache-dir ${ROBOT_HOME}/integration-tests-built-in-library \
     # Clean up
     && rm -rf ${ROBOT_HOME}/integration-tests-built-in-library \
     # Set permissions
-    && set -x \
-    && for path in \
-         /docker-entrypoint.sh \
-    ; do \
-        chmod +x "$path"; \
-        chgrp 0 "$path"; \
-    done
+    && chmod +x /docker-entrypoint.sh \
+    && chgrp 0 /docker-entrypoint.sh
 
 WORKDIR ${ROBOT_HOME}
 
