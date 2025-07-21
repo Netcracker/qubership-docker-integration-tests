@@ -43,12 +43,7 @@ create_tags_resolver_array() {
     done < <(python "${tags_resolver_script}")
 }
 
-# Process some known arguments to run integration tests
-case $1 in
-custom)
-    run_custom_script
-    ;;
-run-robot)
+run_robot() {
     status_writing_script="write_status.py"
     if [[ ${STATUS_WRITING_ENABLED} == "true" ]]; then
         if [[ -n "$WRITE_STATUS_SCRIPT" ]]; then
@@ -109,7 +104,20 @@ run-robot)
             echo "Can not update status for integration tests"
         fi
     fi
+}
+
+# Process some known arguments to run integration tests
+case $1 in
+custom)
+    run_custom_script
+    ;;
+run-robot)
+    # To keep backward compatibility with old entrypoint script we run ttyd by default
+    run_robot
     run_ttyd
+    ;;
+run-robot-without-ttyd)
+    run_robot
     ;;
 run-ttyd)
     run_ttyd
