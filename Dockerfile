@@ -1,5 +1,5 @@
 # hadolint global ignore=DL3013,DL3018
-FROM python:3.13.5-alpine3.22
+FROM python:3.13-alpine3.22
 
 ENV ROBOT_HOME=/opt/robot \
     PYTHONPATH=/usr/local/lib/python3.13/site-packages/integration_library_builtIn \
@@ -50,3 +50,4 @@ WORKDIR ${ROBOT_HOME}
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["run-robot"]
+
