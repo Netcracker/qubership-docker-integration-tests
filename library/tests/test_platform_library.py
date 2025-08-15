@@ -12,11 +12,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 from integration_library_builtIn.PlatformLibrary import PlatformLibrary
-from kubernetes import client
 
 
 @pytest.fixture

@@ -83,7 +83,7 @@ class PlatformLibrary(object):
     | `Scale Down Deployment Entity`                     | monitoring-collector    | postgres-service        |
 
 
-    """ # noqa: E501
+    """  # noqa: E501
     ROBOT_LIBRARY_VERSION = '0.0.1'
 
     def __init__(self,
@@ -111,7 +111,7 @@ class PlatformLibrary(object):
         | Library   | PlatformLibrary | config_file=/mnt/kubeconfig/config | context=cluster/admin |                      | Custom config file will be used with predefined context - `cluster/admin`, GCP token will be refreshed      |
         | Library   | PlatformLibrary | config_file=/mnt/kubeconfig/config |                       |                      | Custom config file will be used with current context for provided file, GCP token will be refreshed        |
         | Library   | PlatformLibrary |                                    |                       |                      | Default config file will be used with current context for provided file, GCP token will be refreshed       |
-        """ # noqa: E501
+        """  # noqa: E501
 
         self.k8s_api_client = get_kubernetes_api_client(config_file=config_file,
                                                         context=context,
@@ -265,7 +265,7 @@ class PlatformLibrary(object):
 
         Example:
         | Create Namespaced Custom Object | integreatly.org | v1alpha1 | prometheus-operator | grafanadashboards | dashboard_body |
-        """ # noqa: E501
+        """  # noqa: E501
         return self.custom_objects_api.create_namespaced_custom_object(group, version, namespace, plural, body,
                                                                        pretty='true')
 
@@ -280,7 +280,7 @@ class PlatformLibrary(object):
 
         Example:
         | Get Namespaced Custom Object | integreatly.org | v1alpha1 | prometheus-operator | grafanadashboards | dashboard_vault |
-        """ # noqa: E501
+        """  # noqa: E501
         return self.custom_objects_api.get_namespaced_custom_object(group, version, namespace, plural, name)
 
     def get_namespaced_custom_object_status(self, group, version, namespace, plural, name):
@@ -294,7 +294,7 @@ class PlatformLibrary(object):
 
         Example:
         | Get Namespaced Custom Object Status| integreatly.org | v1alpha1 | prometheus-operator | grafanadashboards | dashboard_vault |
-        """ # noqa: E501
+        """  # noqa: E501
         return self.custom_objects_api.get_namespaced_custom_object_status(group, version, namespace, plural, name)
 
     def replace_namespaced_custom_object(self, group, version, namespace, plural, name, body):
@@ -309,7 +309,7 @@ class PlatformLibrary(object):
 
         Example:
         | Replace Namespaced Custom Object | integreatly.org | v1alpha1 | prometheus-operator | grafanadashboards | test_dashboard | dashboard_body |
-        """ # noqa: E501 # noqa: E501
+        """  # noqa: E501 # noqa: E501
         return self.custom_objects_api.replace_namespaced_custom_object(group, version, namespace, plural, name, body)
 
     def patch_namespaced_custom_object(self, group, version, namespace, plural, name, body):
@@ -324,7 +324,7 @@ class PlatformLibrary(object):
 
         Example:
         | Patch Namespaced Custom Object | integreatly.org | v1alpha1 | prometheus-operator | grafanadashboards | dashboard_vault | body
-        """ # noqa: E501
+        """  # noqa: E501
         return self.custom_objects_api.patch_namespaced_custom_object(group, version, namespace, plural, name, body)
 
     def delete_namespaced_custom_object(self, group, version, namespace, plural, name):
@@ -338,7 +338,7 @@ class PlatformLibrary(object):
 
         Example:
         | Delete Namespaced Custom Object | integreatly.org | v1alpha1 | prometheus-operator | grafanadashboards | dashboard_vault |
-        """ # noqa: E501
+        """  # noqa: E501
         return self.custom_objects_api.delete_namespaced_custom_object(group, version, namespace, plural, name)
 
     def get_daemon_sets(self, namespace: str) -> List[dict]:
@@ -494,7 +494,7 @@ class PlatformLibrary(object):
         Examples:
         | Get Inactive Deployment Entities Names For Service | kafka-cluster    | kafka                |
         | Get Inactive Deployment Entities Names For Service | postgres-service | monitoring-collector | label=app |
-        """ # noqa: E501
+        """  # noqa: E501
         return self.platform_client.get_inactive_deployment_entities_names_for_service(namespace, service, label)
 
     def get_inactive_deployment_entities_count_for_service(self,
@@ -638,15 +638,13 @@ class PlatformLibrary(object):
         | Check Service Is Scaled | <list_of_deployment_entity_names> | elasticsearch-service | direction=down | timeout=450 |
         | Check Service Is Scaled | <list_of_deployment_entity_names> | elasticsearch-service | direction=down |
         | Check Service Is Scaled | deployment_entity_name | elasticsearch-service |
-        """ # noqa: E501
+        """  # noqa: E501
         direction = direction.lower()
 
         if direction in ('"up"', '"down"', "'up'", "'down'"):
-            raise Exception(
-                f'set direction parameter (up or down) without quote symbols ""')
+            raise Exception('set direction parameter (up or down) without quote symbols ""')
         elif direction not in ("up", "down"):
-            raise Exception(
-                f'direction argument should be "up" or "down" but {direction} is given')
+            raise Exception(f'direction argument should be "up" or "down" but {direction} is given')
 
         if isinstance(deployment_entity_names, str):
             deployment_entity_names = list(deployment_entity_names.split(' '))
@@ -676,7 +674,7 @@ class PlatformLibrary(object):
         | Scale Down Deployment Entities By Service Name | elasticsearch | elasticsearch-service | with_check=True | timeout=450 |
         | Scale Down Deployment Entities By Service Name | elasticsearch | elasticsearch-service | with_check=True |
         | Scale Down Deployment Entities By Service Name | elasticsearch | elasticsearch-service |
-        """ # noqa: E501
+        """  # noqa: E501
         deployment_entity_names = self.get_deployment_entity_names_by_service_name(
             service_name, namespace)
         for deployment_entity_name in deployment_entity_names:
@@ -706,7 +704,7 @@ class PlatformLibrary(object):
         | Scale Up Deployment Entities By Service Name | elasticsearch | elasticsearch-service | with_check=True | timeout=450 |
         | Scale Up Deployment Entities By Service Name | elasticsearch | elasticsearch-service | with_check=True |
         | Scale Up Deployment Entities By Service Name | elasticsearch | elasticsearch-service |
-        """ # noqa: E501
+        """  # noqa: E501
         replicas = kwargs.get('replicas', None)
         if replicas is not None:
             replicas = int(replicas)
@@ -848,7 +846,7 @@ class PlatformLibrary(object):
 
         Example:
         | Patch Namespaced Deployment Entity | elasticsearch-1 | elasticsearch-cluster | <part_of_deployment_entity_spec> |
-        """ # noqa: E501
+        """  # noqa: E501
         self.platform_client.patch_namespaced_deployment_entity(
             name, namespace, body)
 
@@ -868,7 +866,7 @@ class PlatformLibrary(object):
 
         Example:
         | Get Environment Variables For Deployment Entity Container | elasticsearch-0 | elasticsearch-service | elasticsearch | <list_of_variable_names> |
-        """ # noqa: E501
+        """  # noqa: E501
         entity = self.get_deployment_entity(name, namespace)
         return self._get_environment_variables_for_container(entity, container_name, variable_names)
 
@@ -889,7 +887,7 @@ class PlatformLibrary(object):
 
         Example:
         | Set Environment Variables For Deployment Entity Container | elasticsearch-1 | elasticsearch-cluster | elasticsearch | <dictionary_of_variables_to_change> |
-        """ # noqa: E501
+        """  # noqa: E501
         entity = self.get_deployment_entity(name, namespace)
         self._prepare_entity_with_environment_variables_for_container(
             entity, container_name, variables_to_change)
@@ -1082,15 +1080,13 @@ class PlatformLibrary(object):
         | Check Service Of Stateful Sets Is Scaled | <list_of_stateful_set_names> | cassandra | direction=down | timeout=450 |
         | Check Service Of Stateful Sets Is Scaled | <list_of_stateful_set_names> | cassandra | direction=up   |
         | Check Service Of Stateful Sets Is Scaled | stateful_set_name | cassandra |
-        """ # noqa: E501
+        """  # noqa: E501
 
         direction = direction.lower()
         if direction in ('"up"', '"down"', "'up'", "'down'"):
-            raise Exception(
-                f'set direction parameter (up or down) without quote symbols ""')
+            raise Exception('set direction parameter (up or down) without quote symbols ""')
         elif direction not in ("up", "down"):
-            raise Exception(
-                f'direction argument should be "up" or "down" but {direction} is given')
+            raise Exception(f'direction argument should be "up" or "down" but {direction} is given')
 
         if isinstance(stateful_set_names, str):
             stateful_set_names = list(stateful_set_names.split(' '))
@@ -1150,7 +1146,7 @@ class PlatformLibrary(object):
         | Scale Up Stateful Sets By Service Name | cassandra | cassandra | with_check=True | timeout=250     |
         | Scale Up Stateful Sets By Service Name | cassandra | cassandra | with_check=True |
         | Scale Up Stateful Sets By Service Name | cassandra | cassandra |
-        """ # noqa: E501
+        """  # noqa: E501
         replicas = kwargs.get('replicas', None)
         if replicas is not None:
             replicas = int(replicas)
@@ -1286,7 +1282,7 @@ class PlatformLibrary(object):
                                                              container_name: str,
                                                              variable_names: list) -> dict:
         """Returns a dictionary of `Stateful Set` environment variables (key-values) for container.
-        Stateful Set is found by name and namespace. 
+        Stateful Set is found by name and namespace.
         `container_name` specifies name of docker container associated with environment variables (parameter is
         required).
         `variable_names` parameter specifies environment variable names for environment variables which should be
@@ -1296,7 +1292,7 @@ class PlatformLibrary(object):
 
         Example:
         | Get Environment Variables For Stateful Set Container | cassandra0 | cassandra | cassandra | <list_of_environment_variable_names> |
-        """ # noqa: E501
+        """  # noqa: E501
         entity = self.get_stateful_set(name, namespace)
         return self._get_environment_variables_for_container(entity, container_name, variable_names)
 
@@ -1317,7 +1313,7 @@ class PlatformLibrary(object):
 
         Example:
         | Set Environment_Variables For Stateful Set Container | cassandra0 | cassandra | cassandra | <dictionary_of_environment_variables_to_change> |
-        """ # noqa: E501
+        """  # noqa: E501
         entity = self.get_stateful_set(name, namespace)
         self._prepare_entity_with_environment_variables_for_container(
             entity, container_name, variables_to_change)
@@ -1442,7 +1438,7 @@ class PlatformLibrary(object):
 
         Example:
         | Get Pod Container Environment Variables For Service | elasticsearch | elasticsearch-service | elasticsearch | <list_of_variable_names> |
-        """ # noqa: E501
+        """  # noqa: E501
         pods = self.get_pods_by_service_name(service, namespace)
         result = {}
         for pod in pods:
@@ -1496,7 +1492,8 @@ class PlatformLibrary(object):
         if pod_name:
             self.delete_pod_by_pod_name(pod_name, namespace)
 
-    def execute_command_in_pod(self, name: str, namespace: str, command: str, container: str = "", shell: str = "/bin/bash"):
+    def execute_command_in_pod(self, name: str, namespace: str, command: str,
+                               container: str = "", shell: str = "/bin/bash"):
         """Executes given console command within docker container.
         `container` variable specifies name of container. It can be empty if pod contains only one container.
         The Pod is found by name and namespace. Method executes given console command within the stream and
@@ -1506,7 +1503,7 @@ class PlatformLibrary(object):
         | Execute Command In Pod | elasticsearch-0-859f48b988-2ljmx | elasticsearch | ls -la |
         | Execute Command In Pod | consul-server-1                  | consul        | ls -la | container=consul |
         | Execute Command In Pod | consul-server-1                  | consul        | ls -la | container=consul | shell=/bin/sh |
-        """ # noqa: E501
+        """  # noqa: E501
         exec_cmd = [shell, '-c', command]
         response = stream(self.k8s_core_v1_client.connect_get_namespaced_pod_exec,
                           name,
