@@ -1,7 +1,22 @@
+# Copyright 2024-2025 NetCracker Technology Corporation
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 import pytest
 from unittest.mock import Mock, patch, MagicMock
 from kubernetes import client
 from integration_library_builtIn.PlatformLibrary import PlatformLibrary
+
 
 @pytest.fixture
 def mock_k8s_client():
@@ -9,20 +24,21 @@ def mock_k8s_client():
         # Mock CoreV1Api
         mock_core_v1 = Mock()
         mock_client.CoreV1Api.return_value = mock_core_v1
-        
+
         # Mock AppsV1Api
         mock_apps_v1 = Mock()
         mock_client.AppsV1Api.return_value = mock_apps_v1
-        
+
         # Mock CustomObjectsApi
         mock_custom_objects = Mock()
         mock_client.CustomObjectsApi.return_value = mock_custom_objects
-        
+
         # Mock NetworkingV1Api
         mock_networking = Mock()
         mock_client.NetworkingV1Api.return_value = mock_networking
-        
+
         yield mock_client
+
 
 @pytest.fixture
 def platform_library(mock_k8s_client):
@@ -30,7 +46,7 @@ def platform_library(mock_k8s_client):
     with patch('integration_library_builtIn.PlatformLibrary.get_kubernetes_api_client') as mock_get_client:
         mock_api_client = Mock()
         mock_get_client.return_value = mock_api_client
-        
+
         # Mock the KubernetesClient and OpenShiftClient classes
         with patch('integration_library_builtIn.PlatformLibrary.KubernetesClient') as mock_k8s_client_class:
             with patch('integration_library_builtIn.PlatformLibrary.OpenShiftClient') as mock_openshift_client_class:
@@ -38,22 +54,23 @@ def platform_library(mock_k8s_client):
                 mock_k8s_client_instance = Mock()
                 mock_k8s_client_instance.k8s_apps_v1_client = mock_k8s_client.AppsV1Api.return_value
                 mock_k8s_client_class.return_value = mock_k8s_client_instance
-                
+
                 # Set up the OpenShiftClient mock
                 mock_openshift_client_instance = Mock()
                 mock_openshift_client_class.return_value = mock_openshift_client_instance
-                
+
                 # Create the PlatformLibrary instance
                 library = PlatformLibrary(managed_by_operator="true")
-                
+
                 # Replace the client objects with our mocked ones
                 library.k8s_core_v1_client = mock_k8s_client.CoreV1Api.return_value
                 library.k8s_apps_v1_client = mock_k8s_client.AppsV1Api.return_value
                 library.custom_objects_api = mock_k8s_client.CustomObjectsApi.return_value
                 library.networking_api = mock_k8s_client.NetworkingV1Api.return_value
                 library.platform_client = mock_k8s_client_instance
-                
+
                 yield library
+
 
 def test_get_deployment_entity(platform_library, mock_k8s_client):
     # Arrange
@@ -63,7 +80,8 @@ def test_get_deployment_entity(platform_library, mock_k8s_client):
     platform_library.platform_client.get_deployment_entity.return_value = mock_deployment
 
     # Act
-    result = platform_library.get_deployment_entity("test-deployment", "test-namespace")
+    result = platform_library.get_deployment_entity(
+        "test-deployment", "test-namespace")
 
     # Assert
     assert result.metadata.name == "test-deployment"
@@ -71,6 +89,7 @@ def test_get_deployment_entity(platform_library, mock_k8s_client):
     platform_library.platform_client.get_deployment_entity.assert_called_once_with(
         "test-deployment", "test-namespace"
     )
+
 
 def test_get_service(platform_library, mock_k8s_client):
     # Arrange
@@ -89,6 +108,7 @@ def test_get_service(platform_library, mock_k8s_client):
         "test-service", "test-namespace"
     )
 
+
 def test_get_pods(platform_library, mock_k8s_client):
     # Arrange
     mock_pod1 = Mock()
@@ -106,7 +126,9 @@ def test_get_pods(platform_library, mock_k8s_client):
     assert len(result) == 2
     assert result[0].metadata.name == "pod-1"
     assert result[1].metadata.name == "pod-2"
-    platform_library.k8s_core_v1_client.list_namespaced_pod.assert_called_once_with("test-namespace")
+    platform_library.k8s_core_v1_client.list_namespaced_pod.assert_called_once_with(
+        "test-namespace")
+
 
 def test_get_route(platform_library, mock_k8s_client):
     # Arrange
@@ -130,6 +152,7 @@ def test_get_route(platform_library, mock_k8s_client):
         name="test-route"
     )
 
+
 def test_get_route_url(platform_library, mock_k8s_client):
     # Arrange
     mock_route = Mock()
@@ -142,18 +165,21 @@ def test_get_route_url(platform_library, mock_k8s_client):
     # Assert
     assert result == "http://test-route.example.com"
 
+
 def test_scale_up_deployment_entity(platform_library, mock_k8s_client):
     # Arrange
     # The scale methods call the platform client, not the k8s client directly
     # We need to mock the platform client's scale methods
 
     # Act
-    platform_library.scale_up_deployment_entity("test-deployment", "test-namespace")
+    platform_library.scale_up_deployment_entity(
+        "test-deployment", "test-namespace")
 
     # Assert
     platform_library.platform_client.scale_up_deployment_entity.assert_called_once_with(
         "test-deployment", "test-namespace"
     )
+
 
 def test_scale_down_deployment_entity(platform_library, mock_k8s_client):
     # Arrange
@@ -161,12 +187,14 @@ def test_scale_down_deployment_entity(platform_library, mock_k8s_client):
     # We need to mock the platform client's scale methods
 
     # Act
-    platform_library.scale_down_deployment_entity("test-deployment", "test-namespace")
+    platform_library.scale_down_deployment_entity(
+        "test-deployment", "test-namespace")
 
     # Assert
     platform_library.platform_client.scale_down_deployment_entity.assert_called_once_with(
         "test-deployment", "test-namespace"
     )
+
 
 def test_get_config_map(platform_library, mock_k8s_client):
     # Arrange
@@ -185,6 +213,7 @@ def test_get_config_map(platform_library, mock_k8s_client):
         "test-config", "test-namespace"
     )
 
+
 def test_get_secret(platform_library, mock_k8s_client):
     # Arrange
     mock_secret = Mock()
@@ -200,4 +229,44 @@ def test_get_secret(platform_library, mock_k8s_client):
     assert result.data == {"key": "dmFsdWU="}
     platform_library.k8s_core_v1_client.read_namespaced_secret.assert_called_once_with(
         "test-secret", "test-namespace"
-    ) 
+    )
+
+
+def test_get_daemon_sets(platform_library, mock_k8s_client):
+    # Arrange
+    mock_daemon_set1 = Mock()
+    mock_daemon_set1.metadata.name = "daemon-set-1"
+    mock_daemon_set2 = Mock()
+    mock_daemon_set2.metadata.name = "daemon-set-2"
+    mock_response = Mock()
+    mock_response.items = [mock_daemon_set1, mock_daemon_set2]
+    platform_library.k8s_apps_v1_client.list_namespaced_daemon_set.return_value = mock_response
+
+    # Act
+    result = platform_library.get_daemon_sets("test-namespace")
+
+    # Assert
+    assert len(result) == 2
+    assert result[0].metadata.name == "daemon-set-1"
+    assert result[1].metadata.name == "daemon-set-2"
+    platform_library.k8s_apps_v1_client.list_namespaced_daemon_set.assert_called_once_with(
+        "test-namespace")
+
+
+def test_get_daemon_set(platform_library, mock_k8s_client):
+    # Arrange
+    mock_daemon_set = Mock()
+    mock_daemon_set.metadata.name = "test-daemon-set"
+    mock_daemon_set.spec.replicas = 3
+    platform_library.k8s_apps_v1_client.read_namespaced_daemon_set.return_value = mock_daemon_set
+
+    # Act
+    result = platform_library.get_daemon_set(
+        "test-daemon-set", "test-namespace")
+
+    # Assert
+    assert result.metadata.name == "test-daemon-set"
+    assert result.spec.replicas == 3
+    platform_library.k8s_apps_v1_client.read_namespaced_daemon_set.assert_called_once_with(
+        "test-daemon-set", "test-namespace"
+    )

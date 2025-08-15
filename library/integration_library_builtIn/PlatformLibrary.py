@@ -38,7 +38,7 @@ def get_kubernetes_api_client(config_file=None, context=None, persist_config=Tru
             # https://github.com/kubernetes-client/python/issues/2394#issuecomment-2884974440
             client_configuration = Configuration()
             client_configuration.verify_ssl = False
-        
+
         config.load_incluster_config(client_configuration)
 
         return kubernetes.client.ApiClient(configuration=client_configuration)
@@ -352,12 +352,7 @@ class PlatformLibrary(object):
         Example:
         | Get Daemon Sets | prometheus-operator |
         """
-        return self.custom_objects_api.list_namespaced_custom_object(
-            group='apps',
-            version='v1',
-            namespace=namespace,
-            plural='daemonsets'
-        )['items']
+        return self.k8s_apps_v1_client.list_namespaced_daemon_set(namespace).items
 
     def get_daemon_set(self, name: str, namespace: str) -> dict:
         """
@@ -370,13 +365,7 @@ class PlatformLibrary(object):
         Example:
         | Get Daemon Set | node-exporter | prometheus-operator |
         """
-        return self.custom_objects_api.get_namespaced_custom_object(
-            group='apps',
-            version='v1',
-            namespace=namespace,
-            plural='daemonsets',
-            name=name
-        )
+        return self.k8s_apps_v1_client.read_namespaced_daemon_set(name, namespace)
 
     def get_service(self, name: str, namespace: str):
         """Returns Kubernetes `Service` configuration as JSON object.
