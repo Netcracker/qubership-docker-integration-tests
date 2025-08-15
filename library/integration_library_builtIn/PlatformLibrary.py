@@ -24,7 +24,7 @@ from kubernetes import client, config
 from kubernetes.client.configuration import Configuration
 from kubernetes.stream import stream
 from KubernetesClient import KubernetesClient
-from OpenShiftClient import OpenShiftClient # noqa: F401
+from OpenShiftClient import OpenShiftClient  # noqa: F401
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
