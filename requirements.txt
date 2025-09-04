@@ -5,7 +5,7 @@ kubernetes==33.1.0
 oauthlib~=3.3.1
 pyjwt==2.10.1
 pyyaml==6.0.2
-requests==2.32.4
+requests==2.32.5
 requests_oauthlib==2.0.0
 robotframework-requests==0.9.7
 robotframework==7.3.2
