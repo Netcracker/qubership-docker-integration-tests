@@ -48,7 +48,7 @@ rules:
   indentation:
     level: warning
     spaces: 2
-    indent-sequences: true
+    indent-sequences: consistent
     check-multi-line-strings: false
   key-duplicates: enable
   key-ordering: disable
