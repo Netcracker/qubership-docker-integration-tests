@@ -10,7 +10,8 @@ ENV ROBOT_HOME=/opt/robot \
     GROUP_ID=1000
 
 COPY scripts/docker-entrypoint.sh /
-COPY scripts/*.py ${ROBOT_HOME}/
+# COPY scripts/*.py ${ROBOT_HOME}/
+COPY scripts/* ${ROBOT_HOME}/
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
@@ -26,6 +27,12 @@ RUN \
         apk-tools \
         py3-yaml \
         ca-certificates \
+    # Clean up
+    && rm -rf /var/cache/apk/*
+
+RUN echo 'https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories \
+    && apk add --update --no-cache \
+        s5cmd \
     # Clean up
     && rm -rf /var/cache/apk/*
 
