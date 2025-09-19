@@ -10,8 +10,8 @@ start_upload_monitoring() {
     ATTACHMENTS_S3_PATH="${REPORTS_S3_PATH}attachments/"
 
     # Create attachments directory
-    mkdir -p $ADAPTER_S3_OUT_DIR/results/allure-results
-    mkdir -p $ADAPTER_S3_OUT_DIR/results/attachments
+    mkdir -p $ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results
+    mkdir -p $ADAPTER_S3_OUT_DIR/adapter-S3/results/attachments
     
     # Store credentials for background processes (local variables, not exported)
     _BACKGROUND_S3_KEY="$_LOCAL_S3_KEY"
@@ -20,12 +20,12 @@ start_upload_monitoring() {
     # Choose upload method based on environment variable
     if [[ "${UPLOAD_METHOD:-cp}" == "sync" ]]; then
         echo "🔄 Using sync-based upload monitoring (inotifywait + sync)"
-        start_sync_uploader "$ADAPTER_S3_OUT_DIR/results/allure-results" "${RESULTS_S3_PATH}allure-results/" "*result.json" &
-        start_sync_uploader "$ADAPTER_S3_OUT_DIR/results/attachments" "$ATTACHMENTS_S3_PATH" &
+        start_sync_uploader "$ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results" "${RESULTS_S3_PATH}allure-results/" "*result.json" &
+        start_sync_uploader "$ADAPTER_S3_OUT_DIR/adapter-S3/results/attachments" "$ATTACHMENTS_S3_PATH" &
     else
         echo "📁 Using file-based upload monitoring (inotifywait + cp)"
-        start_inotify_uploader "$ADAPTER_S3_OUT_DIR/results/allure-results" "${RESULTS_S3_PATH}allure-results/" "*result.json" &
-        start_inotify_uploader "$ADAPTER_S3_OUT_DIR/results/attachments" "$ATTACHMENTS_S3_PATH" &
+        start_inotify_uploader "$ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results" "${RESULTS_S3_PATH}allure-results/" "*result.json" &
+        start_inotify_uploader "$ADAPTER_S3_OUT_DIR/adapter-S3/results/attachments" "$ATTACHMENTS_S3_PATH" &
     fi
     
     echo "✅ Upload monitoring started"
@@ -119,19 +119,19 @@ finalize_upload() {
 
     # Final sync to ensure all files are captured
     if [[ "$S3_TYPE" == "aws" ]]; then
-        s5cmd --no-verify-ssl sync "$ADAPTER_S3_OUT_DIR/results/allure-results/" "${RESULTS_S3_PATH}allure-results/"
-        s5cmd --no-verify-ssl sync "$ADAPTER_S3_OUT_DIR/results/attachments/" "$ATTACHMENTS_S3_PATH"
+        s5cmd --no-verify-ssl sync "$ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results/" "${RESULTS_S3_PATH}allure-results/"
+        s5cmd --no-verify-ssl sync "$ADAPTER_S3_OUT_DIR/adapter-S3/results/attachments/" "$ATTACHMENTS_S3_PATH"
     elif [[ "$S3_TYPE" == "minio" ]]; then
-        s5cmd --no-verify-ssl --endpoint-url "$S3_API_HOST" sync "$ADAPTER_S3_OUT_DIR/results/allure-results/" "${RESULTS_S3_PATH}allure-results/"
-        s5cmd --no-verify-ssl --endpoint-url "$S3_API_HOST" sync "$ADAPTER_S3_OUT_DIR/results/attachments/" "$ATTACHMENTS_S3_PATH"
+        s5cmd --no-verify-ssl --endpoint-url "$S3_API_HOST" sync "$ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results/" "${RESULTS_S3_PATH}allure-results/"
+        s5cmd --no-verify-ssl --endpoint-url "$S3_API_HOST" sync "$ADAPTER_S3_OUT_DIR/adapter-S3/results/attachments/" "$ATTACHMENTS_S3_PATH"
     fi
 
     # Upload marker file
-    echo -n "false" > $ADAPTER_S3_OUT_DIR/results/allure-results.uploaded
+    echo -n "false" > $ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results.uploaded
     if [[ "$S3_TYPE" == "aws" ]]; then
-        s5cmd --no-verify-ssl cp "$ADAPTER_S3_OUT_DIR/results/allure-results.uploaded" "${RESULTS_S3_PATH}allure-results.uploaded"
+        s5cmd --no-verify-ssl cp "$ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results.uploaded" "${RESULTS_S3_PATH}allure-results.uploaded"
     elif [[ "$S3_TYPE" == "minio" ]]; then
-        s5cmd --no-verify-ssl --endpoint-url "$S3_API_HOST" cp "$ADAPTER_S3_OUT_DIR/results/allure-results.uploaded" "${RESULTS_S3_PATH}allure-results.uploaded"
+        s5cmd --no-verify-ssl --endpoint-url "$S3_API_HOST" cp "$ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results.uploaded" "${RESULTS_S3_PATH}allure-results.uploaded"
     fi
 
     # Generate result URLs

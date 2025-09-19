@@ -36,7 +36,7 @@ init_environment() {
     fi
 
     # Define adapter S3 directory path
-    ADAPTER_S3_OUT_DIR="/tmp/adapter-S3"
+    ADAPTER_S3_OUT_DIR="${ROBOT_HOME}/output"
     
     export ADAPTER_S3_OUT_DIR="${ADAPTER_S3_OUT_DIR}"
 

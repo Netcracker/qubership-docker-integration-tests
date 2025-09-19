@@ -26,9 +26,9 @@ echo "📦 Environment name: $ENV_NAME"
 
 
 # Import modular components
-source ./init.sh
-source ./test-runner.sh
-source ./upload-monitor.sh
+source ${ROBOT_HOME}/scripts/adapter-S3/init.sh
+source ${ROBOT_HOME}/scripts/adapter-S3/test-runner.sh
+source ${ROBOT_HOME}/scripts/adapter-S3/upload-monitor.sh
 
 # Execute main workflow
 echo "🚀 Starting test execution workflow..."
