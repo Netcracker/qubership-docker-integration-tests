@@ -11,7 +11,7 @@ echo "📋 Using robot arguments: $ROBOT_ARGS"
 robot --output $ADAPTER_S3_OUT_DIR/output.xml \
       --log $ADAPTER_S3_OUT_DIR/log.html \
       --report $ADAPTER_S3_OUT_DIR/report.html \
-      --listener "allure_robotframework;$ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results" \
+      --listener "allure_robotframework;$ADAPTER_S3_OUT_DIR/adapter-S3/allure-results" \
       $ROBOT_ARGS
 
 # Execute the script for all tests in folder and subfolders, generate robot and allure results

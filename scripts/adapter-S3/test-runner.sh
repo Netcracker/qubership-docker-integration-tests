@@ -13,7 +13,7 @@ run_tests() {
     
     # Create Allure results directory
     echo "📁 Creating Allure results directory..."
-    mkdir -p $ADAPTER_S3_OUT_DIR/adapter-S3/results/allure-results
+    mkdir -p $ADAPTER_S3_OUT_DIR/adapter-S3/allure-results
 
     # Clear sensitive variables before tests
     echo "🔐 Clearing sensitive environment variables before tests..."
