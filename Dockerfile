@@ -51,6 +51,7 @@ RUN \
     && rm -rf ${ROBOT_HOME}/integration-tests-built-in-library \
     # Set permissions
     && chmod +x /docker-entrypoint.sh \
+    && chmod -R 775 ${ROBOT_HOME}/scripts/adapter-S3 \
     && chgrp 0 /docker-entrypoint.sh
 
 WORKDIR ${ROBOT_HOME}
