@@ -86,6 +86,7 @@ run_robot() {
     robot_args="${robot_args} ./tests"
     
     # Call adapter-S3-entrypoint.sh with robot arguments
+    chmod 775 ${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh
     echo "🚀 Calling adapter-S3-entrypoint.sh with arguments: $robot_args"
     ${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh $robot_args
 
