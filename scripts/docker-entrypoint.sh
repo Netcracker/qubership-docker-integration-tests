@@ -75,11 +75,19 @@ run_robot() {
         excluded_tags=${tags_resolver_array[0]}
     fi
 
-    if [[ -z "$TAGS" ]]; then
-        robot "${excluded_tags}" ./tests
-    else
-        robot -i "${TAGS}" "${excluded_tags}" ./tests
+    # Prepare robot arguments
+    robot_args=""
+    if [[ -n "$TAGS" ]]; then
+        robot_args="-i \"${TAGS}\""
     fi
+    if [[ -n "$excluded_tags" ]]; then
+        robot_args="${robot_args} ${excluded_tags}"
+    fi
+    robot_args="${robot_args} ./tests"
+    
+    # Call adapter-S3-entrypoint.sh with robot arguments
+    echo "🚀 Calling adapter-S3-entrypoint.sh with arguments: $robot_args"
+    ${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh $robot_args
 
     robot_result=$?
     if [[ ${robot_result} -ne 0 ]]; then

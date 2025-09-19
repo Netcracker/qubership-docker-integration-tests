@@ -10,8 +10,8 @@ ENV ROBOT_HOME=/opt/robot \
     GROUP_ID=1000
 
 COPY scripts/docker-entrypoint.sh /
-# COPY scripts/*.py ${ROBOT_HOME}/
-COPY scripts/* ${ROBOT_HOME}/
+COPY scripts/*.py ${ROBOT_HOME}/
+COPY scripts/adapter-S3 ${ROBOT_HOME}/scripts/adapter-S3
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
