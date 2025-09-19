@@ -9,14 +9,6 @@ echo "📅 Timestamp: $(date)"
 # Set default upload method
 export UPLOAD_METHOD="${UPLOAD_METHOD:-sync}"
 echo "📤 Upload method: $UPLOAD_METHOD"
-
-# export REPORT_VIEW_HOST_URL="https://atp3-results-test.kube23mdc.test"
-# export S3_BUCKET="qstp-consul"
-# export S3_TYPE="minio"
-# export S3_API_HOST="https://s3.amazonaws.com"
-# export S3_UI_URL="https://console.atp3-mdc.s3.test"
-# export ENV_NAME="consul"
-
 echo "📦 Report view host URL: $REPORT_VIEW_HOST_URL"
 echo "📦 S3 bucket: $S3_BUCKET"
 echo "📦 S3 type: $S3_TYPE"
