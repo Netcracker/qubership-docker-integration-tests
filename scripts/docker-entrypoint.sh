@@ -96,7 +96,7 @@ run_robot() {
             robot_args+=("-e" "${parsed_excluded_tags}")
         fi
     fi
-    robot_args+=("./tests")
+    robot_args+=("${ROBOT_HOME}/tests")
     
     # Call adapter-S3-entrypoint.sh with robot arguments
     echo "🚀 Calling adapter-S3-entrypoint.sh with arguments: ${robot_args[*]}"
