@@ -11,17 +11,17 @@ echo "📋 Using robot arguments: $ROBOT_ARGS"
 #       --listener "allure_robotframework;$ADAPTER_S3_OUT_DIR/adapter-S3/allure-results" \
 #       "$@"
 
-# robot --output $ADAPTER_S3_OUT_DIR/output.xml \
-#       --log $ADAPTER_S3_OUT_DIR/log.html \
-#       --report $ADAPTER_S3_OUT_DIR/report.html \
-#       --listener "allure_robotframework;$ADAPTER_S3_OUT_DIR/adapter-S3/allure-results" \
-#       -i backup,crud,consul_images -e alerts,consul_images,unauthorized_access,s3_storage /opt/robot/tests
-
 robot --output $ADAPTER_S3_OUT_DIR/output.xml \
       --log $ADAPTER_S3_OUT_DIR/log.html \
       --report $ADAPTER_S3_OUT_DIR/report.html \
       --listener "allure_robotframework;$ADAPTER_S3_OUT_DIR/adapter-S3/allure-results" \
-      -i "backupORcrudORconsul_images" -e "alertsORconsul_imagesORunauthorized_accessORs3_storage" ./tests
+      -i backup,crud,consul_images -e alerts,consul_images,unauthorized_access,s3_storage ./tests
+
+# robot --output $ADAPTER_S3_OUT_DIR/output.xml \
+#       --log $ADAPTER_S3_OUT_DIR/log.html \
+#       --report $ADAPTER_S3_OUT_DIR/report.html \
+#       --listener "allure_robotframework;$ADAPTER_S3_OUT_DIR/adapter-S3/allure-results" \
+#       -i "backupORcrudORconsul_images" -e "alertsORconsul_imagesORunauthorized_accessORs3_storage" ./tests
 
 # Capture the exit code from the script
 exit_code=$?
