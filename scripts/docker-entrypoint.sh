@@ -81,7 +81,7 @@ run_robot() {
         robot_args="-i \"${TAGS}\""
     fi
     if [[ -n "$excluded_tags" ]]; then
-        robot_args="${robot_args} ${excluded_tags}"
+        robot_args="${robot_args} \"${excluded_tags}\""
     fi
     robot_args="${robot_args} ./tests"
     
