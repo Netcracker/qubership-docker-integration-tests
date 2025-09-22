@@ -76,18 +76,22 @@ run_robot() {
     fi
 
     # Prepare robot arguments
-    robot_args=""
+    robot_args=()
     if [[ -n "$TAGS" ]]; then
-        robot_args="-i \"${TAGS}\""
+        # Parse custom tag format (backupORcrudORconsul_images -> backup OR crud OR consul_images)
+        parsed_tags=$(echo "$TAGS" | sed 's/OR/ OR /g')
+        robot_args+=("-i" "${parsed_tags}")
     fi
     if [[ -n "$excluded_tags" ]]; then
-        robot_args="${robot_args} ${excluded_tags}"
+        # Split excluded_tags into array and add each element
+        read -ra excluded_array <<< "$excluded_tags"
+        robot_args+=("${excluded_array[@]}")
     fi
-    robot_args="${robot_args} ./tests"
+    robot_args+=("./tests")
     
     # Call adapter-S3-entrypoint.sh with robot arguments
-    echo "🚀 Calling adapter-S3-entrypoint.sh with arguments: $robot_args"
-    ${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh $robot_args
+    echo "🚀 Calling adapter-S3-entrypoint.sh with arguments: ${robot_args[*]}"
+    ${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh "${robot_args[@]}"
 
     robot_result=$?
     if [[ ${robot_result} -ne 0 ]]; then
