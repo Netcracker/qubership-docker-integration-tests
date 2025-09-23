@@ -9,7 +9,7 @@ robot --output $ADAPTER_S3_OUT_DIR/output.xml \
       --log $ADAPTER_S3_OUT_DIR/log.html \
       --report $ADAPTER_S3_OUT_DIR/report.html \
       --listener "allure_robotframework;$ADAPTER_S3_OUT_DIR/adapter-S3/allure-results" \
-      $ROBOT_ARGS
+      "$@"
 
 # Capture the exit code from the script
 exit_code=$?

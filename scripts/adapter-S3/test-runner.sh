@@ -21,7 +21,7 @@ run_tests() {
 
     # Execute test suite with robot arguments
     echo "🚀 Running test suite..."
-    ${ROBOT_HOME}/scripts/adapter-S3/start_tests.sh $ROBOT_ARGS || TEST_EXIT_CODE=$?
+    ${ROBOT_HOME}/scripts/adapter-S3/start_tests.sh "$@" || TEST_EXIT_CODE=$?
 
     TEST_EXIT_CODE=${TEST_EXIT_CODE:-0}
     echo "ℹ️ Test script exited with code: $TEST_EXIT_CODE (but continuing...)"
