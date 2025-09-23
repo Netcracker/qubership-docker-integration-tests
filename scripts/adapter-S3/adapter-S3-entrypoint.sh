@@ -26,12 +26,11 @@ source ${ROBOT_HOME}/scripts/adapter-S3/upload-monitor.sh
 echo "🚀 Starting test execution workflow..."
 
 # Store all arguments passed to this script
-ROBOT_ARGS="$@"
-echo "📋 Robot arguments: $ROBOT_ARGS"
+echo "📋 Robot arguments: $@"
 
 init_environment
 start_upload_monitoring
-run_tests "$ROBOT_ARGS"
+run_tests "$@"
 finalize_upload
 
 echo "✅ Test job finished successfully!"

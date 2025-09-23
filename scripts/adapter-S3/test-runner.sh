@@ -5,8 +5,7 @@ run_tests() {
     echo "▶ Starting test execution..."
     
     # Store robot arguments passed to this function
-    ROBOT_ARGS="$@"
-    echo "📋 Passing robot arguments to start_tests.sh: $ROBOT_ARGS"
+    echo "📋 Passing robot arguments to start_tests.sh: $@"
     
     # Import upload monitoring module for security functions
     source ${ROBOT_HOME}/scripts/adapter-S3/upload-monitor.sh

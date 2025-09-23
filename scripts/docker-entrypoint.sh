@@ -75,11 +75,11 @@ run_robot() {
         excluded_tags=${tags_resolver_array[0]}
     fi
 
-    robot_args=""
+    robot_args=()
     if [[ -n "$TAGS" ]]; then
         # Parse custom tag format (backupORcrudORconsul_images -> backup,crud,consul_images)
         parsed_tags=$(echo "$TAGS" | sed 's/OR/,/g')
-        robot_args="-i ${parsed_tags}"
+        robot_args+=("-i" "${parsed_tags}")
     fi
     if [[ -n "$excluded_tags" ]]; then
         # Remove the -e flag if it's already present and parse the tags
@@ -88,18 +88,18 @@ run_robot() {
             tags_only="${BASH_REMATCH[1]}"
             # Parse excluded tags format (alertsORunauthorized_accessORconsul_imagesORs3_storage -> alerts,unauthorized_access,consul_images,s3_storage)
             parsed_excluded_tags=$(echo "$tags_only" | sed 's/OR/,/g')
-            robot_args="${robot_args} -e ${parsed_excluded_tags}"
+            robot_args+=("-e" "${parsed_excluded_tags}")
         else
             # No -e flag present, add it
             parsed_excluded_tags=$(echo "$excluded_tags" | sed 's/OR/,/g')
-            robot_args="${robot_args} -e ${parsed_excluded_tags}"
+            robot_args+=("-e" "${parsed_excluded_tags}")
         fi
     fi
-    robot_args="${robot_args} ./tests"
+    robot_args+=("./tests")
     
     # Call adapter-S3-entrypoint.sh with robot arguments
-    echo "🚀 Calling adapter-S3-entrypoint.sh with arguments: $robot_args"
-    ${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh $robot_args
+    echo "🚀 Calling adapter-S3-entrypoint.sh with arguments: ${robot_args[*]}"
+    ${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh "${robot_args[@]}"
 
     robot_result=$?
     if [[ ${robot_result} -ne 0 ]]; then

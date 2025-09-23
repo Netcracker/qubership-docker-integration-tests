@@ -1,8 +1,7 @@
 #!/bin/bash
 
 # Store robot arguments passed to this script
-ROBOT_ARGS="$@"
-echo "📋 Using robot arguments: $ROBOT_ARGS"
+echo "📋 Using robot arguments: $@"
 
 # Execute the script, generate robot and allure results with passed arguments
 robot --output $ADAPTER_S3_OUT_DIR/output.xml \
