@@ -77,22 +77,29 @@ run_robot() {
 
     robot_args=()
     if [[ -n "$TAGS" ]]; then
-        # Parse custom tag format (backupORcrudORconsul_images -> backup,crud,consul_images)
-        parsed_tags=$(echo "$TAGS" | sed 's/OR/,/g')
-        robot_args+=("-i" "${parsed_tags}")
+        # Split by OR and add each tag as separate -i parameter
+        IFS='OR' read -ra tag_array <<< "$TAGS"
+        for tag in "${tag_array[@]}"; do
+            robot_args+=("-i" "$tag")
+        done
     fi
     if [[ -n "$excluded_tags" ]]; then
         # Remove the -e flag if it's already present and parse the tags
         if [[ "$excluded_tags" =~ ^-e[[:space:]]+(.*)$ ]]; then
             # Extract tags without -e flag
             tags_only="${BASH_REMATCH[1]}"
-            # Parse excluded tags format (alertsORunauthorized_accessORconsul_imagesORs3_storage -> alerts,unauthorized_access,consul_images,s3_storage)
-            parsed_excluded_tags=$(echo "$tags_only" | sed 's/OR/,/g')
-            robot_args+=("-e" "${parsed_excluded_tags}")
+            # Split by OR and add each tag as separate -e parameter
+            IFS='OR' read -ra excluded_tag_array <<< "$tags_only"
+            for tag in "${excluded_tag_array[@]}"; do
+                robot_args+=("-e" "$tag")
+            done
         else
             # No -e flag present, add it
-            parsed_excluded_tags=$(echo "$excluded_tags" | sed 's/OR/,/g')
-            robot_args+=("-e" "${parsed_excluded_tags}")
+            # Split by OR and add each tag as separate -e parameter
+            IFS='OR' read -ra excluded_tag_array <<< "$excluded_tags"
+            for tag in "${excluded_tag_array[@]}"; do
+                robot_args+=("-e" "$tag")
+            done
         fi
     fi
     robot_args+=("./tests")
