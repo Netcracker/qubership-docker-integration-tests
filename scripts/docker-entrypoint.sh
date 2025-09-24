@@ -80,7 +80,10 @@ run_robot() {
         # Split by OR and add each tag as separate -i parameter
         IFS='OR' read -ra tag_array <<< "$TAGS"
         for tag in "${tag_array[@]}"; do
-            robot_args+=("-i" "$tag")
+            # Skip empty tags
+            if [[ -n "$tag" ]]; then
+                robot_args+=("-i" "$tag")
+            fi
         done
     fi
     if [[ -n "$excluded_tags" ]]; then
@@ -91,14 +94,20 @@ run_robot() {
             # Split by OR and add each tag as separate -e parameter
             IFS='OR' read -ra excluded_tag_array <<< "$tags_only"
             for tag in "${excluded_tag_array[@]}"; do
-                robot_args+=("-e" "$tag")
+                # Skip empty tags
+                if [[ -n "$tag" ]]; then
+                    robot_args+=("-e" "$tag")
+                fi
             done
         else
             # No -e flag present, add it
             # Split by OR and add each tag as separate -e parameter
             IFS='OR' read -ra excluded_tag_array <<< "$excluded_tags"
             for tag in "${excluded_tag_array[@]}"; do
-                robot_args+=("-e" "$tag")
+                # Skip empty tags
+                if [[ -n "$tag" ]]; then
+                    robot_args+=("-e" "$tag")
+                fi
             done
         fi
     fi
