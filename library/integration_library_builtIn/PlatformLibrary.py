@@ -20,7 +20,6 @@ import urllib3
 import yaml
 from deprecated import deprecated
 from kubernetes import client, config
-from kubernetes.client.configuration import Configuration
 from kubernetes.stream import stream
 from KubernetesClient import KubernetesClient
 from OpenShiftClient import OpenShiftClient  # noqa: F401
@@ -30,9 +29,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):
     try:
-        client_configuration = None
-        config.load_incluster_config(client_configuration)
-        return kubernetes.client.ApiClient(configuration=client_configuration)
+        config.load_incluster_config()
+        return kubernetes.client.ApiClient()
     except config.ConfigException:
         return kubernetes.config.new_client_from_config(config_file=config_file,
                                                         context=context,
