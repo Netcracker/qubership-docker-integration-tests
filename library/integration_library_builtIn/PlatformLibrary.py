@@ -12,7 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import sys
 import time
 from typing import List
 
@@ -21,7 +20,6 @@ import urllib3
 import yaml
 from deprecated import deprecated
 from kubernetes import client, config
-from kubernetes.client.configuration import Configuration
 from kubernetes.stream import stream
 from KubernetesClient import KubernetesClient
 from OpenShiftClient import OpenShiftClient  # noqa: F401
@@ -31,17 +29,8 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):
     try:
-        client_configuration = None
-        if sys.version_info >= (3, 13):
-            # https://docs.python.org/3/whatsnew/3.13.html#ssl
-            # Kubernetes client issue
-            # https://github.com/kubernetes-client/python/issues/2394#issuecomment-2884974440
-            client_configuration = Configuration()
-            client_configuration.verify_ssl = False
-
-        config.load_incluster_config(client_configuration)
-
-        return kubernetes.client.ApiClient(configuration=client_configuration)
+        config.load_incluster_config()
+        return kubernetes.client.ApiClient()
     except config.ConfigException:
         return kubernetes.config.new_client_from_config(config_file=config_file,
                                                         context=context,
