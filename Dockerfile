@@ -11,6 +11,7 @@ ENV ROBOT_HOME=/opt/robot \
 
 COPY scripts/docker-entrypoint.sh /
 COPY scripts/*.py ${ROBOT_HOME}/
+COPY scripts/adapter-S3 ${ROBOT_HOME}/scripts/adapter-S3
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
@@ -29,6 +30,12 @@ RUN \
     # Clean up
     && rm -rf /var/cache/apk/*
 
+RUN echo 'https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories \
+    && apk add --update --no-cache \
+        s5cmd \
+    # Clean up
+    && rm -rf /var/cache/apk/*
+
 RUN \
     # Add an unprivileged user
     groupadd -r robot --gid=${GROUP_ID} \
@@ -44,6 +51,7 @@ RUN \
     && rm -rf ${ROBOT_HOME}/integration-tests-built-in-library \
     # Set permissions
     && chmod +x /docker-entrypoint.sh \
+    && chmod -R 775 ${ROBOT_HOME}/scripts/adapter-S3 \
     && chgrp 0 /docker-entrypoint.sh
 
 WORKDIR ${ROBOT_HOME}
