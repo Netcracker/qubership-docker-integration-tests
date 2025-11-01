@@ -10,4 +10,4 @@ requests_oauthlib==2.0.0
 robotframework-requests==0.9.7
 robotframework==7.3.2
 setuptools~=80.9.0
-urllib3~=2.3.0
+urllib3~=2.5.0
