@@ -1,5 +1,5 @@
-boto3==1.40.44
-botocore==1.40.44
+boto3==1.40.64
+botocore==1.40.64
 deprecated==1.2.18
 kubernetes==34.1.0
 oauthlib~=3.3.1
