@@ -14,6 +14,8 @@ COPY scripts/*.py ${ROBOT_HOME}/
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
+ARG PIP="25.3"
+
 RUN \
     # Install dependencies
     apk add --update --no-cache \
@@ -35,7 +37,7 @@ RUN \
     && useradd -s /bin/bash -r -g robot --uid=${USER_ID} robot \
     && usermod -a -G 0 robot \
     # Install dependencies
-    && python3 -m pip install --no-cache-dir --upgrade \
+    && python3 -m pip install --no-cache-dir --upgrade pip==${PIP} \
         pip \
         setuptools \
     && python3 -m pip install --no-cache-dir -r ${ROBOT_HOME}/requirements.txt \
