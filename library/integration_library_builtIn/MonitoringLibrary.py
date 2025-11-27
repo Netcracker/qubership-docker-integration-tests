@@ -13,6 +13,7 @@
 # limitations under the License.
 
 import json
+import time
 
 import requests
 import urllib3
@@ -48,26 +49,34 @@ class MonitoringLibrary(object):
         self._auth = HTTPBasicAuth(username, password)
         self.k8s_lib = PlatformLibrary()
 
-    def get_alert_status(self, alert_name, namespace):
-        """Returns status of specified alert name. Possible return values: inactive, firing, pending
+    def get_alert_status(self, alert_name, namespace, retries=5, delay=10):
+        for attempt in range(1, retries + 1):
+            try:
+                """Returns status of specified alert name. Possible return values: inactive, firing, pending
 
-        Examples:
-        | Get Alert Status | Elasticsearch_Is_Down_Alarm | elasticsearch-service
-        """
-        response = requests.get(self._api_rules_url, auth=self._auth)
-        json_content = json.loads(response.text)
-        groups = json_content["data"]["groups"]
-        namespace_in_query = f'namespace="{namespace}"'
-        for group in groups:
-            for rule in group["rules"]:
-                if rule['name'] == alert_name:
-                    namespace_label = rule['labels'].get('namespace')
-                    if namespace_label == namespace:
-                        return rule["state"]
-                    elif namespace_label is None and namespace_in_query in rule["query"]:
-                        BuiltIn().run_keyword('log to console',
-                                              f"Warning! There is no namespace label in {alert_name} alert")
-                        return rule["state"]
+            Examples:
+            | Get Alert Status | Elasticsearch_Is_Down_Alarm | elasticsearch-service
+            """
+                response = requests.get(self._api_rules_url, auth=self._auth)
+                json_content = json.loads(response.text)
+                groups = json_content["data"]["groups"]
+                namespace_in_query = f'namespace="{namespace}"'
+                for group in groups:
+                    for rule in group["rules"]:
+                        if rule['name'] == alert_name:
+                            namespace_label = rule['labels'].get('namespace')
+                            if namespace_label == namespace:
+                                return rule["state"]
+                            elif namespace_label is None and namespace_in_query in rule["query"]:
+                                BuiltIn().run_keyword('log to console',
+                                                      f"Warning! There is no namespace label in {alert_name} alert")
+                                return rule["state"]
+                raise ValueError(f"Alert {alert_name} not found in namespace {namespace}")
+            except Exception as e:
+                if attempt < retries:
+                    time.sleep(delay)
+                    continue
+                raise
         return None
 
     def get_metric_values(self, metric_name: str):
