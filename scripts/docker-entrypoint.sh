@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 
 export ROBOT_OPTIONS="--loglevel=info --outputdir output"
 export ROBOT_SYSLOG_FILE=./output/syslog.txt
@@ -15,13 +17,12 @@ if [[ "$DEBUG" == true ]]; then
     printenv
 fi
 
-run_ttyd() {
-    if [[ -z "$TTYD_PORT" ]]; then
-        TTYD_PORT=8080
-    fi
-
-    exec ttyd -p "${TTYD_PORT}" bash
+_term() {
+    echo "SIGTERM received, shutting down robot..."
+    [[ -n "${robot_pid:-}" ]] && kill -TERM "$robot_pid" 2>/dev/null || true
+    exit 0
 }
+trap _term TERM INT
 
 run_custom_script() {
     if [[ -n "$CUSTOM_ENTRYPOINT_SCRIPT" ]]; then
@@ -107,20 +108,28 @@ run_robot() {
 }
 
 # Process some known arguments to run integration tests
-case $1 in
+case "$1" in
 custom)
     run_custom_script
     ;;
 run-robot)
-    # To keep backward compatibility with old entrypoint script we run ttyd by default
-    run_robot
-    run_ttyd
+    run_robot &
+    robot_pid=$!
+    wait $robot_pid
+    robot_exit=$?
+    echo "Robot finished with exit code ${robot_exit}."
+    echo "Starting ttyd..."
+    exec ttyd -p "${TTYD_PORT:-8080}" bash
     ;;
 run-robot-without-ttyd)
-    run_robot
+    run_robot &
+    robot_pid=$!
+    wait $robot_pid
+    robot_exit=$?
+    exit $?
     ;;
 run-ttyd)
-    run_ttyd
+    exec ttyd -p "${TTYD_PORT:-8080}" bash
     ;;
 esac
 
