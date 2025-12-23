@@ -1667,7 +1667,7 @@ class PlatformLibrary(object):
         """
         Returns logs from a given pod in the specified namespace and container.
         """
-        
+
         return self.k8s_core_v1_client.read_namespaced_pod_log(
             name=pod_name,
             namespace=namespace,

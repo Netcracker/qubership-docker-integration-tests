@@ -1,6 +1,4 @@
 #!/bin/bash
-set -e
-
 
 export ROBOT_OPTIONS="--loglevel=info --outputdir output"
 export ROBOT_SYSLOG_FILE=./output/syslog.txt
@@ -60,8 +58,7 @@ run_robot() {
         if [[ -n "$SERVICE_CHECKER_SCRIPT_TIMEOUT" ]]; then
             timeout=${SERVICE_CHECKER_SCRIPT_TIMEOUT}
         fi
-        python "${SERVICE_CHECKER_SCRIPT}" "${timeout}"
-        if [[ $? -ne 0 ]]; then
+        if ! python "${SERVICE_CHECKER_SCRIPT}" "${timeout}"; then
             echo "Service is not ready at least $timeout seconds or some exception occurred"
             exit 1
         fi
@@ -105,6 +102,7 @@ run_robot() {
             echo "Can not update status for integration tests"
         fi
     fi
+    return ${robot_result}
 }
 
 # Process some known arguments to run integration tests
@@ -116,8 +114,6 @@ run-robot)
     run_robot &
     robot_pid=$!
     wait $robot_pid
-    robot_exit=$?
-    echo "Robot finished with exit code ${robot_exit}."
     echo "Starting ttyd..."
     exec ttyd -p "${TTYD_PORT:-8080}" bash
     ;;
@@ -126,7 +122,7 @@ run-robot-without-ttyd)
     robot_pid=$!
     wait $robot_pid
     robot_exit=$?
-    exit $?
+    exit $robot_exit
     ;;
 run-ttyd)
     exec ttyd -p "${TTYD_PORT:-8080}" bash
