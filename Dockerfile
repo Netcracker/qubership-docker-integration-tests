@@ -24,7 +24,6 @@ RUN \
         ttyd \
         build-base \
         apk-tools \
-        py3-yaml \
         ca-certificates \
     # Clean up
     && rm -rf /var/cache/apk/*
