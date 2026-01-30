@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import ssl
 import time
 from typing import List
 
 import kubernetes
 import urllib3
-import ssl
 import yaml
 from deprecated import deprecated
 from kubernetes import client, config
@@ -828,6 +828,10 @@ class PlatformLibrary(object):
 
     @staticmethod
     def _do_labels_satisfy_selector(labels: dict, selector: dict):
+        if selector is None or not isinstance(selector, dict):
+            return False
+        if labels is None or not isinstance(labels, dict):
+            return False
         selector_pairs = list(selector.items())
         label_pairs = list(labels.items())
         if len(selector_pairs) > len(label_pairs):
