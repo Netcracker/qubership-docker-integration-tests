@@ -3,10 +3,10 @@
 The `Docker Integration Tests` (aka `BDI`) is image for integration tests.
 Supposed that this image will not be used to execute integration tests directly
 but real images for integration tests will use this image as basic
-(`FROM` command in the particular docker file). BDI builds some `sandbox` which
+(`FROM` command in the particular Docker file). BDI builds some `sandbox` which
 includes `python` interpreter, Robot Framework, some useful tools such as
 `bash`, `shadow`, `vim`, `rsync`, `ttyd`, common custom Robot Framework libraries
-(for example, `PlatformLibrary`) and customized docker entry point script.
+(for example, `PlatformLibrary`) and customized Docker entry point script.
 
 * [Introduction](#introduction)
   * [Pre-installed tools](#pre-installed-tools)
@@ -46,7 +46,7 @@ and move `PlatformLibrary.html` file to documentation directory.
 
 ## Docker Entry point Script
 
-A docker entry point script is a script which will be executed after docker container is created.
+A Docker entry point script is a script which will be executed after Docker container is created.
 If you override the image, its entry point script
 will be executed by default. But if you override the entry point as well, your own entry point will be run.
 Docker Integration Tests contains simple and customized entry point script - `/docker-entrypoint.sh`
@@ -59,7 +59,7 @@ with the following command (possible `CMD` arguments):
 
 * `run-ttyd` command starts `ttyd` tool. `ttyd` is Web-console which rather useful for dev and troubleshooting purposes.
 
-* `custom` command executes custom bash script if this script's path is provided.
+* `custom` command executes custom Bash script if this script's path is provided.
 * To provide custom script this script should exist within container
   and environment variable `CUSTOM_ENTRYPOINT_SCRIPT` should contain path to the script.
   Actually, `custom` command is equivalent to overriding the entry point
@@ -211,7 +211,7 @@ STATUS_CUSTOM_RESOURCE_NAME=zookeeper
 ```
 
 If your k8s pod with integration tests always writes status to well-known custom resource you can override all this environment
-variables (excluding `STATUS_CUSTOM_RESOURCE_NAMESPACE`) in your docker file and set namespace in helm chart.
+variables (excluding `STATUS_CUSTOM_RESOURCE_NAMESPACE`) in your Docker file and set namespace in helm chart.
 
 Both of this approaches work with native k8s entities too. For example:
 
@@ -223,7 +223,7 @@ STATUS_CUSTOM_RESOURCE_PLURAL=deployments
 STATUS_CUSTOM_RESOURCE_NAME=zookeeper-1
 ```
 
-If feature is available `write_status.py` script is called two times. The first time immediately after docker
+If feature is available `write_status.py` script is called two times. The first time immediately after Docker
 entrypoint script was started to set `In progress` condition. The second time after tests are finished and parsed by
 `analyze results` script to set in the `message` field tests results. Default analyzer script is `write_status.py`
 but inheritor image can override it by `WRITE_STATUS_SCRIPT` environment variable which contains path to custom
@@ -244,7 +244,7 @@ should be placed in the `result.txt` file and the first line will be used as sho
 
 **Note!** This feature (write status to k8s entities) is disabled by default! To turn on it please set the
 `STATUS_WRITING_ENABLED` environment variable to `true`.
-For example in your docker file as
+For example in your Docker file as
 
 ```ini
 ENV STATUS_WRITING_ENABLED=true
@@ -276,5 +276,33 @@ Docker Integration Tests uses the following environment variables:
 * IS_STATUS_BOOLEAN
 
 All of them instead of `TAGS`, `ONLY_INTEGRATION_TESTS`, `STATUS_CUSTOM_RESOURCE_NAMESPACE`,
-`STATUS_CUSTOM_RESOURCE_PATH` and maybe `DEBUG` we recommend overriding in the docker file and do not
+`STATUS_CUSTOM_RESOURCE_PATH` and maybe `DEBUG` we recommend overriding in the Docker file and do not
+forward them to the integration tests deployment environment.
+
+### ATP Storage (S3) Variables
+
+These variables enable automatic upload of test results and reports to S3-compatible storage:
+
+* `ATP_STORAGE_PROVIDER` - Storage provider type: `aws` (AWS S3), `minio` (MinIO), or `s3` (S3-compatible storage)
+* `ATP_STORAGE_SERVER_URL` - S3 API endpoint URL (required for MinIO and S3-compatible storage, e.g., <https://minio.example.com> or <https://s3.amazonaws.com>)
+* `ATP_STORAGE_SERVER_UI_URL` - S3 UI URL for browsing uploaded files (optional, e.g., <https://minio-ui.example.com>)
+* `ATP_STORAGE_BUCKET` - S3 bucket name for storing test results. If empty, S3 integration is disabled
+* `ATP_STORAGE_REGION` - S3 region (optional, default: us-east-1). Required for AWS S3
+* `ATP_STORAGE_USERNAME` - S3 credentials username:
+  * For AWS S3: AWS Access Key ID
+  * For MinIO: MinIO Access Key
+  * Required when `ATP_STORAGE_BUCKET` is set
+* `ATP_STORAGE_PASSWORD` - S3 credentials password:
+  * For AWS S3: AWS Secret Access Key
+  * For MinIO: MinIO Secret Key
+  * Required when `ATP_STORAGE_BUCKET` is set
+* `ATP_REPORT_VIEW_UI_URL` - URL for viewing Allure reports (optional, e.g., <https://allure.example.com>)
+* `ENVIRONMENT_NAME` - Environment name for organizing test results in S3 (e.g., dev, staging, prod). Results are stored in: `s3://{bucket}/Result/{environment}/{date}/{time}/`
+* `UPLOAD_METHOD` - Upload method: `sync` (directory sync) or `cp` (file-by-file upload, default: sync)
+
+**Note:** Test results are automatically uploaded to S3 with the following structure:
+- Allure results: `s3://{bucket}/Result/{environment}/{date}/{time}/allure-results/`
+- Attachments: `s3://{bucket}/Report/{environment}/{date}/{time}/attachments/`
+
+All ATP Storage variables except `ENVIRONMENT_NAME` it is recommended to override in the Docker file and do not
 forward them to the integration tests deployment environment.

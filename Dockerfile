@@ -11,6 +11,7 @@ ENV ROBOT_HOME=/opt/robot \
 
 COPY scripts/docker-entrypoint.sh /
 COPY scripts/*.py ${ROBOT_HOME}/
+COPY scripts/adapter-S3 ${ROBOT_HOME}/scripts/adapter-S3
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
@@ -26,6 +27,13 @@ RUN \
         apk-tools \
         py3-yaml \
         ca-certificates \
+        inotify-tools \
+    # Clean up
+    && rm -rf /var/cache/apk/*
+
+RUN echo 'https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories \
+    && apk add --update --no-cache \
+        s5cmd \
     # Clean up
     && rm -rf /var/cache/apk/*
 
@@ -42,11 +50,18 @@ RUN \
     && python3 -m pip install --no-cache-dir ${ROBOT_HOME}/integration-tests-built-in-library \
     # Clean up
     && rm -rf ${ROBOT_HOME}/integration-tests-built-in-library \
+    # Create output directory
+    && mkdir -p ${ROBOT_HOME}/output \
     # Set permissions
     && chmod +x /docker-entrypoint.sh \
+    && chmod -R 775 ${ROBOT_HOME} \
+    && chown -R ${USER_ID}:0 ${ROBOT_HOME} \
+    && chgrp -R 0 ${ROBOT_HOME} \
     && chgrp 0 /docker-entrypoint.sh
 
 WORKDIR ${ROBOT_HOME}
+
+USER 1000:0
 
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["run-robot"]
