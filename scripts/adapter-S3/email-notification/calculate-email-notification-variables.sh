@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Calculate Test Pass Rate from Allure Results
-# 
+#
 # This script analyzes test results from allure-results directory
 # and calculates the overall pass rate, then exports it as environment variable
 #
@@ -13,22 +13,23 @@ set -eo pipefail
 
 # Logging functions
 log_info() {
-    echo "ℹ️ $1"
+    echo "INFO: $1"
 }
 
 log_success() {
-    echo "✅ $1"
+    echo "SUCCESS: $1"
 }
 
 log_warning() {
-    echo "⚠️ $1"
+    echo "WARNING: $1"
 }
 
 log_error() {
-    echo "❌ $1"
+    echo "ERROR: $1"
 }
 
-# Get script directory
+# Get script directory (exported for potential external use)
+# shellcheck disable=SC2034
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # Default allure-results directory (now in parent directory)
@@ -41,14 +42,14 @@ if [ ! -d "$ALLURE_RESULTS_DIR" ]; then
 fi
 
 # Check if jq is available
-if ! command -v jq &> /dev/null; then
+if ! command -v jq &>/dev/null; then
     log_error "jq is required but not installed. Please install jq to parse JSON files."
     exit 1
 fi
 
 # Check if bc is available, if not we'll use awk for calculations
 BC_AVAILABLE=false
-if command -v bc &> /dev/null; then
+if command -v bc &>/dev/null; then
     BC_AVAILABLE=true
 fi
 
@@ -70,33 +71,33 @@ test_details+=("------------ | -------------------------------------------------
 for result_file in "$ALLURE_RESULTS_DIR"/*-result.json; do
     if [ -f "$result_file" ]; then
         log_info "Processing: $(basename "$result_file")"
-        
+
         # Extract test status using jq
         status=$(jq -r '.status' "$result_file" 2>/dev/null || echo "unknown")
         test_name=$(jq -r '.name' "$result_file" 2>/dev/null || echo "Unknown Test")
-        
+
         case "$status" in
-            "passed")
-                passed_tests=$((passed_tests + 1))
-                log_success "✓ $test_name"
-                test_details+=("✅ PASSED | $test_name")
-                ;;
-            "failed")
-                failed_tests=$((failed_tests + 1))
-                log_error "✗ $test_name"
-                test_details+=("❌ FAILED | $test_name")
-                ;;
-            "skipped")
-                skipped_tests=$((skipped_tests + 1))
-                log_warning "⚠ $test_name"
-                test_details+=("⚠️ SKIPPED | $test_name")
-                ;;
-            *)
-                log_warning "? $test_name (status: $status)"
-                test_details+=("❓ UNKNOWN | $test_name")
-                ;;
+        "passed")
+            passed_tests=$((passed_tests + 1))
+            log_success "PASSED: $test_name"
+            test_details+=("PASSED       | $test_name")
+            ;;
+        "failed")
+            failed_tests=$((failed_tests + 1))
+            log_error "FAILED: $test_name"
+            test_details+=("FAILED       | $test_name")
+            ;;
+        "skipped")
+            skipped_tests=$((skipped_tests + 1))
+            log_warning "SKIPPED: $test_name"
+            test_details+=("SKIPPED      | $test_name")
+            ;;
+        *)
+            log_warning "? $test_name (status: $status)"
+            test_details+=("UNKNOWN      | $test_name")
+            ;;
         esac
-        
+
         total_tests=$((total_tests + 1))
     fi
 done
@@ -169,4 +170,3 @@ echo "TEST_OVERALL_STATUS=$overall_status"
 echo "TEST_DETAILS_STRING=<multiline string with test details>"
 
 log_success "Pass rate calculation completed successfully"
-

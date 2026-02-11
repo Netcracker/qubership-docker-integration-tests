@@ -1,12 +1,12 @@
 #!/bin/bash
 
 # Generate Message from Template (Final Simplified Version)
-# 
+#
 # This script generates a message file from a template by replacing placeholders
 # with actual values from environment variables
 #
 # Usage: ./generate-email-notification-file.sh [template_file]
-# 
+#
 # Dependencies:
 # - calculate-email-notification-variables.sh (for test statistics)
 
@@ -15,42 +15,45 @@ set -eo pipefail
 # Function to generate email notification body message
 generate_email_notification_file() {
     local template_file="${1:-}"
-    
+
     # Logging functions
     log_info() {
-        echo "ℹ️ $1"
-    }
-
-    log_success() {
-        echo "✅ $1"
+        echo "INFO: $1"
     }
 
     log_warning() {
-        echo "⚠️ $1"
+        echo "WARNING: $1"
     }
 
     log_error() {
-        echo "❌ $1"
+        echo "ERROR: $1"
+    }
+
+    # shellcheck disable=SC2329
+    log_success() {
+        echo "SUCCESS: $1"
     }
 
     # Get script directory
-    local SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    local SCRIPT_DIR
+    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
     # Set default values if not provided
     if [ -z "$template_file" ]; then
         template_file="$SCRIPT_DIR/email-notification-body-template.txt"
     fi
-    
+
     # Set allure results directory to default location
     local allure_results_dir="/tmp/clone/allure-results"
-    
+
     # Generate output file name based on template name
-    local template_basename=$(basename "$template_file" .txt)
-    
+    local template_basename
+    template_basename=$(basename "$template_file" .txt)
+
     # Create email-notification-generated directory one level up
     local output_dir="/tmp/clone/scripts/email-notification-generated"
     mkdir -p "$output_dir"
-    
+
     local output_file="$output_dir/${template_basename}-generated.txt"
 
     # Check if template file exists
@@ -80,12 +83,14 @@ generate_email_notification_file() {
     TIMESTAMP="${TIMESTAMP:-$(date '+%Y-%m-%d %H:%M:%S UTC')}"
 
     # Read template content
-    local template_content=$(cat "$template_file")
+    local template_content
+    template_content=$(cat "$template_file")
 
     log_info "Replacing placeholders with actual values..."
 
     # Replace placeholders and handle conditional blocks using awk
-    local message_content=$(echo "$template_content" | awk -v overall_status="$TEST_OVERALL_STATUS" \
+    local message_content
+    message_content=$(echo "$template_content" | awk -v overall_status="$TEST_OVERALL_STATUS" \
         -v pass_rate="$TEST_PASS_RATE" \
         -v total_count="$TEST_TOTAL_COUNT" \
         -v passed_count="$TEST_PASSED_COUNT" \
@@ -148,12 +153,12 @@ generate_email_notification_file() {
                 skip_until_end = 0
                 next
             }
-            
+
             # Skip lines if we are in a conditional block that should be skipped
             if (in_conditional && (skip_until_else || skip_until_end)) {
                 next
             }
-            
+
             # Replace placeholders
             gsub(/{{TEST_OVERALL_STATUS}}/, overall_status)
             gsub(/{{TEST_PASS_RATE}}/, pass_rate)
@@ -163,32 +168,32 @@ generate_email_notification_file() {
             gsub(/{{TEST_SKIPPED_COUNT}}/, skipped_count)
             gsub(/{{TEST_FAILURE_RATE}}/, failure_rate)
             gsub(/{{TEST_COVERAGE}}/, coverage)
-                    gsub(/{{EXECUTION_DATE}}/, exec_date)
-        gsub(/{{ENVIRONMENT_NAME}}/, environment_name)
-                gsub(/{{ATP_REPORT_VIEW_UI_URL}}/, report_host_url)
-        gsub(/{{ALLURE_REPORT_URL}}/, allure_report_url)
-        gsub(/{{TIMESTAMP}}/, timestamp)
-            
-        print
+            gsub(/{{EXECUTION_DATE}}/, exec_date)
+            gsub(/{{ENVIRONMENT_NAME}}/, environment_name)
+            gsub(/{{ATP_REPORT_VIEW_UI_URL}}/, report_host_url)
+            gsub(/{{ALLURE_REPORT_URL}}/, allure_report_url)
+            gsub(/{{TIMESTAMP}}/, timestamp)
+
+            print
     }')
 
     # Replace TEST_DETAILS placeholder separately
     if [ -n "${TEST_DETAILS_STRING:-}" ]; then
         # Create temporary file with test details
         temp_details_file=$(mktemp)
-        echo -e "$TEST_DETAILS_STRING" > "$temp_details_file"
-        
+        echo -e "$TEST_DETAILS_STRING" >"$temp_details_file"
+
         # Use sed with file input to replace placeholder
         message_content=$(echo "$message_content" | sed "/{{TEST_DETAILS}}/r $temp_details_file" | sed "/{{TEST_DETAILS}}/d")
-        
+
         # Clean up temporary file
         rm -f "$temp_details_file"
     else
-        message_content=$(echo "$message_content" | sed "s|{{TEST_DETAILS}}|No test details available|g")
+        message_content="${message_content//\{\{TEST_DETAILS\}\}/No test details available}"
     fi
 
     # Write the generated message to output file
-    printf "%s" "$message_content" > "$output_file"
+    printf "%s" "$message_content" >"$output_file"
 
     log_success "Message generated successfully: $output_file"
 
@@ -204,8 +209,7 @@ generate_email_notification_file() {
 
     log_info "Message content exported as GENERATED_MESSAGE environment variable"
     log_info "Message file path exported as MESSAGE_FILE environment variable"
-    
+
     # Return the message content
     # echo "$message_content"
 }
-
