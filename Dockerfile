@@ -61,9 +61,8 @@ RUN \
 
 WORKDIR ${ROBOT_HOME}
 
-USER 1000:0
-
 ENTRYPOINT ["/docker-entrypoint.sh"]
 CMD ["run-robot"]
+
 
 
