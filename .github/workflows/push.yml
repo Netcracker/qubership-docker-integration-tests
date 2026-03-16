@@ -46,6 +46,9 @@ jobs:
         - name: qubership-docker-integration-tests
           file: Dockerfile
           context: .
+        - name: qubership-docker-integration-tests-debian
+          file: debian-build/Dockerfile
+          context: .
     runs-on: ubuntu-latest
     name: ${{ matrix.component.name }}
     steps:
