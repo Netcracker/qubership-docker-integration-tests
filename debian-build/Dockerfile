@@ -31,19 +31,15 @@ RUN \
     # Clean up
     && rm -rf /var/lib/apt/lists/*
 
-RUN set -eux; \
-    ARCH=$(dpkg --print-architecture); \
-    case "$ARCH" in \
-      amd64) S5CMD_ARCH="amd64" ;; \
-      arm64) S5CMD_ARCH="arm64" ;; \
-      *) echo "Unsupported arch: $ARCH" && exit 1 ;; \
-    esac; \
-    curl -fL -o /tmp/s5cmd.tar.gz https://github.com/peak/s5cmd/releases/latest/download/s5cmd_linux_${S5CMD_ARCH}.tar.gz; \
-    ls -lh /tmp/s5cmd.tar.gz; \
-    tar -xzf /tmp/s5cmd.tar.gz -C /tmp; \
-    mv /tmp/s5cmd /usr/local/bin/s5cmd; \
-    chmod +x /usr/local/bin/s5cmd; \
-    rm -f /tmp/s5cmd.tar.gz
+RUN ARCH=$(dpkg --print-architecture) \
+    && if [ "$ARCH" = "amd64" ]; then FILE="s5cmd_2.3.0_Linux-64bit.tar.gz"; \
+       elif [ "$ARCH" = "arm64" ]; then FILE="s5cmd_2.3.0_Linux-arm64.tar.gz"; \
+       else echo "Unsupported architecture: $ARCH" && exit 1; fi \
+    && curl -fL -o /tmp/s5cmd.tar.gz https://github.com/peak/s5cmd/releases/download/v2.3.0/${FILE} \
+    && tar -xzf /tmp/s5cmd.tar.gz -C /tmp \
+    && mv /tmp/s5cmd /usr/local/bin/s5cmd \
+    && chmod +x /usr/local/bin/s5cmd \
+    && rm -f /tmp/s5cmd.tar.gz
 
 RUN \
     # Add an unprivileged user
