@@ -31,9 +31,11 @@ RUN \
     # Clean up
     && rm -rf /var/lib/apt/lists/*
 
-RUN \
-    # Install s5cmd
-    curl -L https://github.com/peak/s5cmd/releases/latest/download/s5cmd_linux_amd64.tar.gz \
+RUN ARCH=$(dpkg --print-architecture) \
+    && if [ "$ARCH" = "amd64" ]; then S5CMD_ARCH="amd64"; \
+       elif [ "$ARCH" = "arm64" ]; then S5CMD_ARCH="arm64"; \
+       else echo "Unsupported architecture: $ARCH" && exit 1; fi \
+    && curl -fL https://github.com/peak/s5cmd/releases/latest/download/s5cmd_linux_${S5CMD_ARCH}.tar.gz \
     | tar -xz \
     && mv s5cmd /usr/local/bin/s5cmd
 
