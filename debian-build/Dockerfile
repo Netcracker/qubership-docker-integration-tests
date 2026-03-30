@@ -28,6 +28,7 @@ RUN \
         python3-yaml \
         ca-certificates \
         inotify-tools \
+        ttyd \
     # Clean up
     && rm -rf /var/lib/apt/lists/*
 
