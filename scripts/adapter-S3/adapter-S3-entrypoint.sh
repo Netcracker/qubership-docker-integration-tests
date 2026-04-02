@@ -10,6 +10,7 @@ echo " Timestamp: $(date)"
 export UPLOAD_METHOD="${UPLOAD_METHOD:-sync}"
 echo " Upload method: $UPLOAD_METHOD"
 echo " Report view host URL: $ATP_REPORT_VIEW_UI_URL"
+echo " ATP report upload enabled (atpReport.enabled -> ATP_REPORT_ENABLED): ${ATP_REPORT_ENABLED:-false}"
 echo " S3 bucket: ${ATP_STORAGE_BUCKET:-<not set>}"
 echo " S3 provider: ${ATP_STORAGE_PROVIDER:-<not set>}"
 echo " S3 API host: ${ATP_STORAGE_SERVER_URL:-<not set>}"
@@ -30,21 +31,21 @@ echo " Robot arguments: $*"
 # Initialize environment
 init_environment
 
-# Start upload monitoring only if S3 is enabled
-if [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
+# Start upload monitoring only if ATP report upload is enabled and bucket is set
+if atp_report_upload_enabled && [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
     start_upload_monitoring
 else
-    echo "️ Skipping upload monitoring (S3 integration disabled)"
+    echo " Skipping upload monitoring (ATP report upload disabled or bucket not set)"
 fi
 
 # Run tests
 run_tests "$@"
 
-# Finalize upload only if S3 is enabled
-if [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
+# Finalize upload only if ATP report upload is enabled and bucket is set
+if atp_report_upload_enabled && [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
     finalize_upload
 else
-    echo "️ Skipping upload finalization (S3 integration disabled)"
+    echo " Skipping upload finalization (ATP report upload disabled or bucket not set)"
     echo " Test results are available locally at: $TMP_DIR"
 fi
 

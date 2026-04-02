@@ -2,9 +2,9 @@
 
 # Event-based upload monitoring module
 start_upload_monitoring() {
-    # Skip if S3 integration is disabled
-    if [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
-        echo "WARNING: Skipping upload monitoring (S3 integration disabled)"
+    # Skip if ATP report upload is disabled or bucket is missing
+    if ! atp_report_upload_enabled || [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
+        echo "WARNING: Skipping upload monitoring (ATP report upload disabled or ATP_STORAGE_BUCKET not set)"
         return 0
     fi
 
@@ -113,9 +113,9 @@ sync_directory_to_s3() {
 
 # Finalize upload after tests
 finalize_upload() {
-    # Skip if S3 integration is disabled
-    if [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
-        echo "WARNING: Skipping upload finalization (S3 integration disabled)"
+    # Skip if ATP report upload is disabled or bucket is missing
+    if ! atp_report_upload_enabled || [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
+        echo "WARNING: Skipping upload finalization (ATP report upload disabled or ATP_STORAGE_BUCKET not set)"
         echo "Test results are available locally at: $TMP_DIR"
         return 0
     fi
