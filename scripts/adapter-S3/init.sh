@@ -63,5 +63,8 @@ init_environment() {
     # Remove previous contents if any
     rm -rf "${TMP_DIR:?}/"*
 
+    export ALLURE_RESULTS_DIR="${ROBOT_HOME}/output/allure-results"
+    mkdir -p "${ALLURE_RESULTS_DIR}"
+
     echo "SUCCESS: Environment initialized successfully"
 }
