@@ -111,9 +111,18 @@ run_robot() {
     fi
     robot_args+=("./tests")
 
-    # Call adapter-S3-entrypoint.sh with robot arguments
-    echo "Calling adapter-S3-entrypoint.sh with arguments: ${robot_args[*]}"
-    "${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh" "${robot_args[@]}"
+    : "${ATP_REPORT_ENABLED:=false}"
+    if [[ "${ATP_REPORT_ENABLED}" == "true" ]]; then
+        echo "Calling adapter-S3-entrypoint.sh with arguments: ${robot_args[*]}"
+        "${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh" "${robot_args[@]}"
+    else
+        echo "ATP report adapter disabled (ATP_REPORT_ENABLED!=true); running robot like upstream image"
+        if [[ -z "$TAGS" ]]; then
+            robot "${excluded_tags}" ./tests
+        else
+            robot -i "${TAGS}" "${excluded_tags}" ./tests
+        fi
+    fi
 
     robot_result=$?
     if [[ ${robot_result} -ne 0 ]]; then

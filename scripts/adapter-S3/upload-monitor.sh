@@ -2,9 +2,9 @@
 
 # Event-based upload monitoring module
 start_upload_monitoring() {
-    # Skip if S3 integration is disabled
-    if [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
-        echo "WARNING: Skipping upload monitoring (S3 integration disabled)"
+    # Skip if ATP report upload is disabled or bucket is missing
+    if ! atp_report_upload_enabled || [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
+        echo "WARNING: Skipping upload monitoring (ATP report upload disabled or ATP_STORAGE_BUCKET not set)"
         return 0
     fi
 
@@ -15,8 +15,8 @@ start_upload_monitoring() {
     REPORTS_S3_PATH="s3://${ATP_STORAGE_BUCKET}/Report/${ENVIRONMENT_NAME}/${CURRENT_DATE}/${CURRENT_TIME}/"
     ATTACHMENTS_S3_PATH="${REPORTS_S3_PATH}attachments/"
 
-    # Create attachments directory
-    mkdir -p "$TMP_DIR/allure-results"
+    : "${ALLURE_RESULTS_DIR:=${ROBOT_HOME}/output/allure-results}"
+    mkdir -p "$ALLURE_RESULTS_DIR"
     mkdir -p "$TMP_DIR/attachments"
 
     # Store credentials for background processes (local variables, not exported)
@@ -26,11 +26,11 @@ start_upload_monitoring() {
     # Choose upload method based on environment variable
     if [[ "${UPLOAD_METHOD:-cp}" == "sync" ]]; then
         echo "Using sync-based upload monitoring (inotifywait + sync)"
-        start_sync_uploader "$TMP_DIR/allure-results" "${RESULTS_S3_PATH}allure-results/" "*result.json" &
+        start_sync_uploader "$ALLURE_RESULTS_DIR" "${RESULTS_S3_PATH}allure-results/" "*result.json" &
         start_sync_uploader "$TMP_DIR/attachments" "$ATTACHMENTS_S3_PATH" &
     else
         echo "Using file-based upload monitoring (inotifywait + cp)"
-        start_inotify_uploader "$TMP_DIR/allure-results" "${RESULTS_S3_PATH}allure-results/" "*result.json" &
+        start_inotify_uploader "$ALLURE_RESULTS_DIR" "${RESULTS_S3_PATH}allure-results/" "*result.json" &
         start_inotify_uploader "$TMP_DIR/attachments" "$ATTACHMENTS_S3_PATH" &
     fi
 
@@ -113,9 +113,9 @@ sync_directory_to_s3() {
 
 # Finalize upload after tests
 finalize_upload() {
-    # Skip if S3 integration is disabled
-    if [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
-        echo "WARNING: Skipping upload finalization (S3 integration disabled)"
+    # Skip if ATP report upload is disabled or bucket is missing
+    if ! atp_report_upload_enabled || [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
+        echo "WARNING: Skipping upload finalization (ATP report upload disabled or ATP_STORAGE_BUCKET not set)"
         echo "Test results are available locally at: $TMP_DIR"
         return 0
     fi
@@ -132,14 +132,16 @@ finalize_upload() {
 
     # Final sync to ensure all files are captured
     if [[ "$ATP_STORAGE_PROVIDER" == "aws" ]]; then
-        s5cmd --no-verify-ssl sync "$TMP_DIR/allure-results/" "${RESULTS_S3_PATH}allure-results/"
+        : "${ALLURE_RESULTS_DIR:=${ROBOT_HOME}/output/allure-results}"
+        s5cmd --no-verify-ssl sync "$ALLURE_RESULTS_DIR/" "${RESULTS_S3_PATH}allure-results/"
         s5cmd --no-verify-ssl sync "$TMP_DIR/attachments/" "$ATTACHMENTS_S3_PATH" 2>/dev/null || true
         # Sync email-notification-generated only if it exists
         if [[ -d "$TMP_DIR/scripts/email-notification-generated" ]]; then
             s5cmd --no-verify-ssl sync "$TMP_DIR/scripts/email-notification-generated/" "${RESULTS_S3_PATH}email-notification-generated/"
         fi
     elif [[ "$ATP_STORAGE_PROVIDER" == "minio" || "$ATP_STORAGE_PROVIDER" == "s3" ]]; then
-        s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" sync "$TMP_DIR/allure-results/" "${RESULTS_S3_PATH}allure-results/"
+        : "${ALLURE_RESULTS_DIR:=${ROBOT_HOME}/output/allure-results}"
+        s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" sync "$ALLURE_RESULTS_DIR/" "${RESULTS_S3_PATH}allure-results/"
         s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" sync "$TMP_DIR/attachments/" "$ATTACHMENTS_S3_PATH" 2>/dev/null || true
         # Sync email-notification-generated only if it exists
         if [[ -d "$TMP_DIR/scripts/email-notification-generated" ]]; then

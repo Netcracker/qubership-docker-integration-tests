@@ -19,10 +19,6 @@ run_tests() {
         exit 1
     fi
 
-    # Create Allure results directory
-    echo "Creating Allure results directory..."
-    mkdir -p "$TMP_DIR/allure-results"
-
     # Clear sensitive variables before tests (only if S3 is enabled)
     if [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
         echo "Clearing sensitive environment variables before tests..."
