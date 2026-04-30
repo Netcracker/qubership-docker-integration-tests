@@ -27,7 +27,6 @@ RUN \
         ttyd \
         build-base \
         apk-tools \
-        py3-yaml \
         ca-certificates \
         inotify-tools \
     # Clean up
