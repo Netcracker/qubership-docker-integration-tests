@@ -1,8 +1,6 @@
+---
 name: Build Artifacts
-permissions:
-  contents: read
-  packages: write
-  actions: read
+
 on:
   release:
     types: [created]
@@ -28,6 +26,11 @@ on:
       - 'LICENSE'
       - 'README.md'
       - 'SECURITY.md'
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
 
 concurrency:
   # On main/release, we don't want any jobs cancelled so the sha is used to name the group

@@ -1,9 +1,5 @@
+---
 name: Run Tests
-
-permissions:
-  contents: read
-  actions: write
-  checks: write
 
 on:
   pull_request:
@@ -14,6 +10,11 @@ on:
       - 'requirements.txt'
       - 'pytest.ini'
       - '.github/workflows/test.yml'
+
+permissions:
+  contents: read
+  actions: write
+  checks: write
 
 jobs:
   test:
