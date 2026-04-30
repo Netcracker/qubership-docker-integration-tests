@@ -1,5 +1,12 @@
 #!/bin/bash
 
+# atpReport.enabled (Helm) -> ATP_REPORT_ENABLED: only "true" or "false"
+: "${ATP_REPORT_ENABLED:=false}"
+
+atp_report_upload_enabled() {
+    [[ "${ATP_REPORT_ENABLED}" == "true" ]]
+}
+
 # Environment initialization module
 init_environment() {
     echo "Initializing environment..."
@@ -12,11 +19,15 @@ init_environment() {
         CURRENT_TIME=$(date +%H-%M-%S) # e.g., 11-48-00
     fi
 
-    # Check if S3 integration is enabled (based on ATP_STORAGE_BUCKET)
-    if [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
-        echo "S3 integration enabled (bucket: ${ATP_STORAGE_BUCKET})"
+    # ATP report upload to S3: requires ATP_REPORT_ENABLED=true and ATP_STORAGE_BUCKET
+    if atp_report_upload_enabled; then
+        if [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
+            echo "ERROR: ATP_REPORT_ENABLED is true but ATP_STORAGE_BUCKET is not set"
+            exit 1
+        fi
+        echo "ATP report upload to S3 enabled (bucket: ${ATP_STORAGE_BUCKET})"
 
-        # Configure AWS S3 parameters (required when S3 is enabled) - using local variables for security
+        # Configure AWS S3 parameters (required when upload is enabled) - using local variables for security
         if [[ -z "${ATP_STORAGE_USERNAME}" ]]; then
             echo "ERROR: ATP_STORAGE_USERNAME is required but not set"
             exit 1
@@ -39,7 +50,10 @@ init_environment() {
             export AWS_NO_VERIFY_SSL="true"           # Optional: disable SSL verification
         fi
     else
-        echo "WARNING: S3 integration disabled (ATP_STORAGE_BUCKET is not set)"
+        echo "WARNING: ATP report upload to S3 disabled (set ATP_REPORT_ENABLED=true to enable)"
+        if [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
+            echo "INFO: ATP_STORAGE_BUCKET is set (${ATP_STORAGE_BUCKET}) but uploads remain disabled until ATP_REPORT_ENABLED=true"
+        fi
     fi
 
     # Define temp clone path
@@ -48,6 +62,9 @@ init_environment() {
 
     # Remove previous contents if any
     rm -rf "${TMP_DIR:?}/"*
+
+    export ALLURE_RESULTS_DIR="${ROBOT_HOME}/output/allure-results"
+    mkdir -p "${ALLURE_RESULTS_DIR}"
 
     echo "SUCCESS: Environment initialized successfully"
 }
