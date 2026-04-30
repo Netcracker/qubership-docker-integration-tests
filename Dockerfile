@@ -1,4 +1,4 @@
-# hadolint global ignore=DL3013,DL3018
+# hadolint global ignore=DL3008,DL3013,DL3018
 FROM python:3.13-alpine3.23
 
 ENV ROBOT_HOME=/opt/robot \
