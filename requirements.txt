@@ -8,7 +8,7 @@ pyyaml==6.0.3
 requests==2.33.0
 requests_oauthlib==2.0.0
 robotframework-requests==0.9.7
-allure-robotframework==2.15.3
+allure-robotframework==2.16.0
 robotframework==7.4.2
 setuptools~=82.0.0
 urllib3~=2.6.3
