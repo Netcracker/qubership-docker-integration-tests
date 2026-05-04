@@ -2,7 +2,7 @@
 FROM python:3.14-alpine3.23
 
 ENV ROBOT_HOME=/opt/robot \
-    PYTHONPATH=/usr/local/lib/python3.13/site-packages/integration_library_builtIn \
+    PYTHONPATH=/usr/local/lib/python3.14/site-packages/integration_library_builtIn \
     IS_ANALYZER_RESULT_ENABLED=true \
     IS_TAGS_RESOLVER_ENABLED=true \
     STATUS_WRITING_ENABLED=false \
