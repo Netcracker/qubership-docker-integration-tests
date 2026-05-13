@@ -81,8 +81,12 @@ run_robot() {
         robot_args+=("-i" "$TAGS")
     fi
     if [[ -n "$excluded_tags" ]]; then
-        # Shell-split the "-e ..." prefix into args like the standard branch effectively does.
-        robot_args+=($excluded_tags)
+        # robot_tags_resolver.py emits "-e tag1ORtag2..."; pass as two argv tokens (no unquoted expansion).
+        if [[ "$excluded_tags" =~ ^-e[[:space:]]+(.*)$ ]]; then
+            robot_args+=("-e" "${BASH_REMATCH[1]}")
+        else
+            robot_args+=("$excluded_tags")
+        fi
     fi
     robot_args+=("./tests")
 
