@@ -1,10 +1,10 @@
 #!/bin/bash
 
-# atpReport.enabled (Helm) -> ATP_REPORT_ENABLED: only "true" or "false"
-: "${ATP_REPORT_ENABLED:=false}"
+# Adapter-S3 is only sourced when the ATP report path is active (see docker-entrypoint.sh).
 
-atp_report_upload_enabled() {
-    [[ "${ATP_REPORT_ENABLED}" == "true" ]]
+# True when a bucket is set — actually publish reports to S3. Empty bucket: run tests, no S3 publish.
+atp_report_upload() {
+    [[ -n "${ATP_STORAGE_BUCKET:-}" ]]
 }
 
 # Environment initialization module
@@ -19,41 +19,48 @@ init_environment() {
         CURRENT_TIME=$(date +%H-%M-%S) # e.g., 11-48-00
     fi
 
-    # ATP report upload to S3: requires ATP_REPORT_ENABLED=true and ATP_STORAGE_BUCKET
-    if atp_report_upload_enabled; then
-        if [[ -z "${ATP_STORAGE_BUCKET}" ]]; then
-            echo "ERROR: ATP_REPORT_ENABLED is true but ATP_STORAGE_BUCKET is not set"
-            exit 1
-        fi
-        echo "ATP report upload to S3 enabled (bucket: ${ATP_STORAGE_BUCKET})"
+    # Bucket set: full S3 publish path — fail fast if creds/settings are incomplete (exit 1 → pod Error, not stuck Running+ttyd).
+    if atp_report_upload; then
+        local _missing=()
+        [[ -z "${ATP_STORAGE_PROVIDER:-}" ]] && _missing+=(ATP_STORAGE_PROVIDER)
+        [[ -z "${ATP_STORAGE_USERNAME:-}" ]] && _missing+=(ATP_STORAGE_USERNAME)
+        [[ -z "${ATP_STORAGE_PASSWORD:-}" ]] && _missing+=(ATP_STORAGE_PASSWORD)
+        [[ -z "${ENVIRONMENT_NAME:-}" ]] && _missing+=(ENVIRONMENT_NAME)
 
-        # Configure AWS S3 parameters (required when upload is enabled) - using local variables for security
-        if [[ -z "${ATP_STORAGE_USERNAME}" ]]; then
-            echo "ERROR: ATP_STORAGE_USERNAME is required but not set"
+        local _prov_lc="${ATP_STORAGE_PROVIDER,,}"
+        case "${_prov_lc}" in
+        aws)
+            [[ -z "${ATP_STORAGE_REGION:-}" ]] && _missing+=(ATP_STORAGE_REGION)
+            ;;
+        minio | s3)
+            [[ -z "${ATP_STORAGE_SERVER_URL:-}" ]] && _missing+=(ATP_STORAGE_SERVER_URL)
+            [[ -z "${ATP_STORAGE_REGION:-}" ]] && _missing+=(ATP_STORAGE_REGION)
+            ;;
+        *)
+            echo "ERROR: ATP_STORAGE_PROVIDER must be aws, minio, or s3 (got: '${ATP_STORAGE_PROVIDER:-}')"
             exit 1
-        fi
-        if [[ -z "${ATP_STORAGE_PASSWORD}" ]]; then
-            echo "ERROR: ATP_STORAGE_PASSWORD is required but not set"
+            ;;
+        esac
+
+        if [[ ${#_missing[@]} -gt 0 ]]; then
+            echo "ERROR: S3 upload is configured (ATP_STORAGE_BUCKET is set) but required variables are missing or empty: ${_missing[*]}"
             exit 1
         fi
 
-        # Store credentials in local variables (not exported to environment)
+        echo "ATP report upload to S3 enabled (provider: ${ATP_STORAGE_PROVIDER}, bucket: ${ATP_STORAGE_BUCKET})"
+
         _LOCAL_S3_KEY="$ATP_STORAGE_USERNAME"
         _LOCAL_S3_SECRET="$ATP_STORAGE_PASSWORD"
         export AWS_ACCESS_KEY_ID="$_LOCAL_S3_KEY"
         export AWS_SECRET_ACCESS_KEY="$_LOCAL_S3_SECRET"
+        export AWS_REGION="${ATP_STORAGE_REGION}"
 
-        # Configure additional s5cmd settings for MinIO only
-        if [[ "${ATP_STORAGE_PROVIDER}" == "minio" || "${ATP_STORAGE_PROVIDER}" == "s3" ]]; then
+        if [[ "${_prov_lc}" == "minio" || "${_prov_lc}" == "s3" ]]; then
             export AWS_ENDPOINT_URL="${ATP_STORAGE_SERVER_URL}"
-            export AWS_REGION="${ATP_STORAGE_REGION}" # Required by s5cmd even for MinIO
-            export AWS_NO_VERIFY_SSL="true"           # Optional: disable SSL verification
+            export AWS_NO_VERIFY_SSL="true"
         fi
     else
-        echo "WARNING: ATP report upload to S3 disabled (set ATP_REPORT_ENABLED=true to enable)"
-        if [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
-            echo "INFO: ATP_STORAGE_BUCKET is set (${ATP_STORAGE_BUCKET}) but uploads remain disabled until ATP_REPORT_ENABLED=true"
-        fi
+        echo "INFO: ATP_STORAGE_BUCKET is empty — running tests without S3 upload."
     fi
 
     # Define temp clone path
