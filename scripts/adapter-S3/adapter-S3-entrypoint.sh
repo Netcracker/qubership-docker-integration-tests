@@ -31,21 +31,21 @@ echo " Robot arguments: $*"
 # Initialize environment
 init_environment
 
-# Start upload monitoring only if ATP report upload is enabled and bucket is set
-if atp_report_upload_enabled && [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
+# Start upload monitoring only when publishing to S3 (bucket set)
+if atp_report_upload; then
     start_upload_monitoring
 else
-    echo " Skipping upload monitoring (ATP report upload disabled or bucket not set)"
+    echo " Skipping upload monitoring (no bucket — results stay local)"
 fi
 
 # Run tests
 run_tests "$@"
 
-# Finalize upload only if ATP report upload is enabled and bucket is set
-if atp_report_upload_enabled && [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
+# Finalize upload only when publishing to S3 (bucket set)
+if atp_report_upload; then
     finalize_upload
 else
-    echo " Skipping upload finalization (ATP report upload disabled or bucket not set)"
+    echo " Skipping upload finalization (no bucket — results stay local)"
     echo " Test results are available locally at: $TMP_DIR"
 fi
 

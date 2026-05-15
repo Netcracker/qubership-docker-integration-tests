@@ -73,40 +73,19 @@ run_robot() {
         excluded_tags=${tags_resolver_array[0]}
     fi
 
+    # Build args exactly like the standard (non-ATP) branch does:
+    # - pass TAGS as a single -i expression (so NOT/OR/AND semantics are identical)
+    # - pass excluded_tags as-is (it's produced like: "-e tag1ORtag2")
     robot_args=()
     if [[ -n "$TAGS" ]]; then
-        # Split by OR and add each tag as separate -i parameter
-        IFS='OR' read -ra tag_array <<<"$TAGS"
-        for tag in "${tag_array[@]}"; do
-            # Skip empty tags
-            if [[ -n "$tag" ]]; then
-                robot_args+=("-i" "$tag")
-            fi
-        done
+        robot_args+=("-i" "$TAGS")
     fi
     if [[ -n "$excluded_tags" ]]; then
-        # Remove the -e flag if it's already present and parse the tags
+        # robot_tags_resolver.py emits "-e tag1ORtag2..."; pass as two argv tokens (no unquoted expansion).
         if [[ "$excluded_tags" =~ ^-e[[:space:]]+(.*)$ ]]; then
-            # Extract tags without -e flag
-            tags_only="${BASH_REMATCH[1]}"
-            # Split by OR and add each tag as separate -e parameter
-            IFS='OR' read -ra excluded_tag_array <<<"$tags_only"
-            for tag in "${excluded_tag_array[@]}"; do
-                # Skip empty tags
-                if [[ -n "$tag" ]]; then
-                    robot_args+=("-e" "$tag")
-                fi
-            done
+            robot_args+=("-e" "${BASH_REMATCH[1]}")
         else
-            # No -e flag present, add it
-            # Split by OR and add each tag as separate -e parameter
-            IFS='OR' read -ra excluded_tag_array <<<"$excluded_tags"
-            for tag in "${excluded_tag_array[@]}"; do
-                # Skip empty tags
-                if [[ -n "$tag" ]]; then
-                    robot_args+=("-e" "$tag")
-                fi
-            done
+            robot_args+=("$excluded_tags")
         fi
     fi
     robot_args+=("./tests")

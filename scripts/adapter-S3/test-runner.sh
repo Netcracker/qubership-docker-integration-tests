@@ -19,8 +19,8 @@ run_tests() {
         exit 1
     fi
 
-    # Clear sensitive variables before tests (only if S3 is enabled)
-    if [[ -n "${ATP_STORAGE_BUCKET}" ]]; then
+    # Clear credentials from the environment only when S3 publish was configured (bucket + ATP on).
+    if atp_report_upload; then
         echo "Clearing sensitive environment variables before tests..."
         clear_sensitive_vars
     fi
