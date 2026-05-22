@@ -78,3 +78,25 @@ Selector labels.
 app.kubernetes.io/name: {{ include "container-hardening.name" . }}
 app.kubernetes.io/instance: {{ cat (include "container-hardening.name" .) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
 {{- end -}}
+
+{{/*
+Resolve the container-hardening runner image.
+When the App Deployer injects .Values.deployDescriptor the image is read from
+the descriptor; otherwise falls back to .Values.containerHardening.image so
+the chart keeps working standalone.
+*/}}
+{{- define "find_image" -}}
+  {{- $image := .default -}}
+  {{- if .vals.deployDescriptor -}}
+    {{- if index .vals.deployDescriptor .deployName -}}
+      {{- $image = (index .vals.deployDescriptor .deployName "image") -}}
+    {{- else if index .vals.deployDescriptor .SERVICE_NAME -}}
+      {{- $image = (index .vals.deployDescriptor .SERVICE_NAME "image") -}}
+    {{- end -}}
+  {{- end -}}
+  {{- printf "%s" $image -}}
+{{- end -}}
+
+{{- define "container-hardening.findImage" -}}
+  {{- include "find_image" (dict "deployName" "containerHardening" "SERVICE_NAME" "container-hardening-image" "vals" .Values "default" .Values.containerHardening.image) -}}
+{{- end -}}
