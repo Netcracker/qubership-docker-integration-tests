@@ -16,7 +16,9 @@ Test Container Hardening
     ...                whose app.kubernetes.io/part-of label matches are checked. When PART_OF
     ...                is empty, all pods in the namespace are checked.
     [Tags]    container_hardening
-    ${part_of}=    Run Keyword If    '${PART_OF}' != ''
-    ...    Split String    ${PART_OF}    ,
+    ${part_of}=    Set Variable    ${NONE}
+    IF    '${PART_OF}' != ''
+        ${part_of}=    Split String    ${PART_OF}    ,
+    END
     ${exclusions}=    Evaluate    json.loads('${EXCLUSIONS_JSON}') if '${EXCLUSIONS_JSON}' else {}    json
-    Check Container Hardening    ${part_of}  ${NAMESPACE}  ${exclusions}
+    Check Container Hardening    ${part_of}    ${NAMESPACE}    ${exclusions}

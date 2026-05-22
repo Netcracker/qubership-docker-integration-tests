@@ -1753,7 +1753,16 @@ class PlatformLibrary(object):
         | Check Container Hardening   exclusions=${exclusions}
         """
         if isinstance(part_of, str):
-            part_of = [part_of]
+            # Guard against Robot Framework passing the string 'None' when a variable
+            # was not assigned (Run Keyword If with no ELSE branch).
+            if part_of.strip().lower() == 'none' or not part_of.strip():
+                part_of = None
+            else:
+                part_of = [part_of]
+        if isinstance(part_of, list):
+            part_of = [p for p in part_of if p and str(p).strip().lower() != 'none']
+            if not part_of:
+                part_of = None
         filter_by_part_of = bool(part_of)
         if exclusions is None:
             exclusions = {}
