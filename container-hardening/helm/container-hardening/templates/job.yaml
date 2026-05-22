@@ -1,0 +1,65 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "container-hardening.name" . }}
+  labels:
+    {{- include "container-hardening.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+  annotations:
+    "helm.sh/hook": post-install,post-upgrade
+    "helm.sh/hook-delete-policy": before-hook-creation
+    "helm.sh/hook-weight": "10"
+    "argocd.argoproj.io/hook": PostSync
+    "argocd.argoproj.io/sync-wave": "10"
+    "argocd.argoproj.io/hook-delete-policy": BeforeHookCreation
+spec:
+  {{- if or (gt .Capabilities.KubeVersion.Major "1") (ge .Capabilities.KubeVersion.Minor "12") }}
+  ttlSecondsAfterFinished: {{ .Values.containerHardening.ttlSecondsAfterFinished | default 120 }}
+  {{- end }}
+  template:
+    metadata:
+      labels:
+        {{- include "container-hardening.labels" . | nindent 8 }}
+        app.kubernetes.io/component: backend
+    spec:
+      restartPolicy: Never
+      serviceAccountName: {{ include "container-hardening.name" . }}
+      volumes:
+        - name: robot-output
+          emptyDir:
+            sizeLimit: 256Mi
+        - name: tmp
+          emptyDir:
+            sizeLimit: 64Mi
+      securityContext:
+        {{- include "container-hardening.globalPodSecurityContext" . | nindent 8 }}
+      containers:
+        - name: {{ include "container-hardening.name" . }}
+          image: {{ .Values.containerHardening.image }}
+          imagePullPolicy: Always
+          command: ["run-robot-without-ttyd"]
+          env:
+            - name: TAGS
+              value: "container_hardening"
+            - name: KUBE_NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: PART_OF
+              value: {{ .Values.containerHardening.partOf | quote }}
+            - name: EXCLUSIONS_JSON
+              value: {{ .Values.containerHardening.exclusions | toJson | quote }}
+          resources:
+            requests:
+              memory: {{ .Values.containerHardening.resources.requests.memory | default "128Mi" }}
+              cpu: {{ .Values.containerHardening.resources.requests.cpu | default "100m" }}
+            limits:
+              memory: {{ .Values.containerHardening.resources.limits.memory | default "256Mi" }}
+              cpu: {{ .Values.containerHardening.resources.limits.cpu | default "200m" }}
+          volumeMounts:
+            - name: robot-output
+              mountPath: /opt/robot/output
+            - name: tmp
+              mountPath: /tmp
+          securityContext:
+            {{- include "container-hardening.globalContainerSecurityContext" . | nindent 12 }}

@@ -1,0 +1,44 @@
+global:
+  # Global pod-level security context additions (merged into the default runAsNonRoot + seccompProfile).
+  securityContext: {}
+
+containerHardening:
+  # Container image for the hardening test runner.
+  image: "ghcr.io/netcracker/qubership-docker-integration-tests-hardening:main"
+
+  # Comma-separated list of app.kubernetes.io/part-of label values to filter pods.
+  # When empty, all pods in the release namespace are checked.
+  # Example: "kafka,kafka-services"
+  partOf: ""
+
+  # Per-component rule exclusions. Map of app.kubernetes.io/name → comma-separated rule IDs.
+  # Use the special key _all to skip rules for every pod regardless of name.
+  # Example:
+  #   exclusions:
+  #     _all: CH12
+  #     my-service: "CH4, CH11"
+  exclusions: {}
+
+  # How long Kubernetes keeps the finished Job before automatic deletion (seconds).
+  ttlSecondsAfterFinished: 120
+
+  resources:
+    requests:
+      memory: "128Mi"
+      cpu: "100m"
+    limits:
+      memory: "256Mi"
+      cpu: "200m"
+
+# Version label applied to all resources (set by CI / App Deployer at release time).
+ARTIFACT_DESCRIPTOR_VERSION: ""
+
+# Part-of label applied to all resources.
+PART_OF: "container-hardening"
+
+# Delimiter used when building app.kubernetes.io/instance values.
+DELIMITER: "-"
+
+# Target platform. Set to "KUBERNETES" to add runAsUser/runAsGroup (1000) to the pod securityContext.
+# Leave empty for OpenShift, which manages UIDs via SCCs.
+PAAS_PLATFORM: "KUBERNETES"

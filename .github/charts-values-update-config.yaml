@@ -1,0 +1,5 @@
+charts:
+  - path: container-hardening/helm/container-hardening
+    images:
+      - name: qubership-docker-integration-tests-hardening
+        valuesPath: containerHardening.image

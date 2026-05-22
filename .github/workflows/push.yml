@@ -52,6 +52,12 @@ jobs:
           - name: qubership-docker-integration-tests-debian
             file: debian-build/Dockerfile
             context: .
+          - name: qubership-docker-integration-tests-hardening
+            file: container-hardening/docker/Dockerfile
+            context: container-hardening
+          - name: qubership-docker-integration-tests-hardening-transfer
+            file: container-hardening/docker-transfer/Dockerfile
+            context: .
     runs-on: ubuntu-latest
     name: ${{ matrix.component.name }}
     steps:
