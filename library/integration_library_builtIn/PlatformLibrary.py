@@ -14,7 +14,7 @@
 
 import ssl
 import time
-from typing import List
+from typing import Dict, List, Optional, Union
 
 import kubernetes
 import urllib3
@@ -22,8 +22,17 @@ import yaml
 from deprecated import deprecated
 from kubernetes import client, config
 from kubernetes.stream import stream
+from robot.api import logger as robot_logger
 from KubernetesClient import KubernetesClient
 from OpenShiftClient import OpenShiftClient  # noqa: F401
+
+# Forbidden container ports per CH8 rule (security hardening).
+_FORBIDDEN_PORTS = frozenset(
+    list(range(17, 996)) + [
+        1080, 1236, 1433, 1434, 1494, 1512, 1524, 1525,
+        1645, 1646, 1649, 1758, 1759, 1789, 1812, 1911, 26000,
+    ]
+)
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
@@ -1692,3 +1701,298 @@ class PlatformLibrary(object):
             container=container_name,
             tail_lines=tail_lines
         )
+
+    # ------------------------------------------------------------------
+    # Container hardening checks (CH1–CH12)
+    # ------------------------------------------------------------------
+
+    def check_container_hardening(
+        self,
+        part_of: Union[str, List[str]],
+        namespace: Optional[str] = None,
+        exclusions: Optional[Dict[str, str]] = None,
+    ) -> None:
+        """Verifies container security hardening rules CH1–CH12 for all pods whose
+        ``app.kubernetes.io/part-of`` label matches one of the given values.
+
+        Rules checked:
+
+        | Rule | Description |
+        | CH1  | Run as non-root (runAsNonRoot=true, runAsUser != 0) |
+        | CH2  | Privileged mode forbidden (privileged=false, allowPrivilegeEscalation=false) |
+        | CH3  | Host namespaces forbidden (hostPID, hostIPC, hostNetwork must be false) |
+        | CH4  | Root filesystem must be read-only (readOnlyRootFilesystem=true) |
+        | CH5  | Linux capabilities must be dropped (capabilities.drop: [ALL]) |
+        | CH6  | Seccomp must be enabled (seccompProfile.type=RuntimeDefault) |
+        | CH7  | Bidirectional mount propagation forbidden |
+        | CH8  | Forbidden ports must not be declared |
+        | CH9  | Container image must have a tag |
+        | CH10 | hostNetwork must be absent or false |
+        | CH11 | hostPath volumes forbidden |
+        | CH12 | Secrets must not be exposed as environment variables |
+
+        :param part_of: single value or list of values for the ``app.kubernetes.io/part-of`` label
+        :param namespace: target namespace; defaults to the current pod's namespace when in-cluster
+        :param exclusions: mapping of ``app.kubernetes.io/name`` → comma-separated rule IDs to skip.
+                           Use the special key ``_all`` to skip rules for every pod regardless of name,
+                           e.g. ``{"_all": "CH6", "zookeeper-backup-daemon": "CH1,CH10"}``
+
+        Example:
+
+        | ${part_of}=     Create List         qubership-kafka
+        | ${exclusions}=  Create Dictionary   _all=CH6   zookeeper-backup-daemon=CH1,CH10
+        | Check Container Hardening   ${part_of}   kafka-namespace   ${exclusions}
+        """
+        if isinstance(part_of, str):
+            part_of = [part_of]
+        if exclusions is None:
+            exclusions = {}
+        if namespace is None:
+            namespace = os.getenv('KUBE_NAMESPACE')
+
+        robot_logger.info(
+            f"[CH] Starting container hardening check | "
+            f"part-of={part_of} | namespace={namespace}"
+        )
+        if exclusions:
+            robot_logger.info(f"[CH] Exclusions configured: {exclusions}")
+
+        pods = self.get_pods(namespace)
+        target_pods = [
+            pod for pod in pods
+            if pod.metadata.labels
+            and pod.metadata.labels.get('app.kubernetes.io/part-of') in part_of
+        ]
+
+        robot_logger.info(
+            f"[CH] Found {len(target_pods)} pod(s) matching "
+            f"app.kubernetes.io/part-of in {part_of}"
+        )
+
+        if not target_pods:
+            robot_logger.warn(
+                f"[CH] No pods found with app.kubernetes.io/part-of in {part_of} "
+                f"in namespace '{namespace}'. Check that the label is set correctly."
+            )
+
+        global_excluded = {r.strip() for r in exclusions.get('_all', '').split(',') if r.strip()}
+        if global_excluded:
+            robot_logger.info(f"[CH] Global exclusions (applied to all pods): {global_excluded}")
+
+        all_violations: List[str] = []
+
+        for pod in target_pods:
+            pod_name = pod.metadata.name
+            app_name = (pod.metadata.labels or {}).get('app.kubernetes.io/name', '')
+            raw_excluded = exclusions.get(app_name, '')
+            excluded_rules = global_excluded | {r.strip() for r in raw_excluded.split(',') if r.strip()}
+
+            robot_logger.info(
+                f"[CH] Checking pod='{pod_name}' "
+                f"app.kubernetes.io/name='{app_name}' "
+                f"excluded={excluded_rules or 'none'}"
+            )
+
+            violations = self._check_pod_hardening_rules(pod, excluded_rules)
+
+            if violations:
+                for v in violations:
+                    robot_logger.warn(f"[CH] VIOLATION pod='{pod_name}': {v}")
+                    all_violations.append(f"pod='{pod_name}': {v}")
+            else:
+                robot_logger.info(
+                    f"[CH] pod='{pod_name}': all applicable rules PASSED"
+                )
+
+        if all_violations:
+            summary = (
+                f"Container hardening check FAILED: "
+                f"{len(all_violations)} violation(s) found\n"
+                + "\n".join(f"  - {v}" for v in all_violations)
+            )
+            raise AssertionError(summary)
+
+        robot_logger.info(
+            f"[CH] Container hardening check PASSED for all "
+            f"{len(target_pods)} pod(s)"
+        )
+
+    def _check_pod_hardening_rules(self, pod, excluded_rules: set) -> List[str]:
+        """Return a list of human-readable violation strings for the given pod."""
+        violations: List[str] = []
+        spec = pod.spec
+        pod_sc = spec.security_context  # V1PodSecurityContext or None
+
+        # --- Pod-level checks ------------------------------------------------
+
+        # CH3: Host namespaces forbidden
+        if 'CH3' not in excluded_rules:
+            if spec.host_pid:
+                violations.append("[CH3] spec.hostPID=true — host namespaces are forbidden")
+            if spec.host_ipc:
+                violations.append("[CH3] spec.hostIPC=true — host namespaces are forbidden")
+            if spec.host_network:
+                violations.append("[CH3] spec.hostNetwork=true — host namespaces are forbidden")
+
+        # CH10: Direct access to worker node network forbidden
+        if 'CH10' not in excluded_rules:
+            if spec.host_network:
+                violations.append(
+                    "[CH10] spec.hostNetwork=true — "
+                    "direct access to worker node network is forbidden"
+                )
+
+        # CH11: hostPath volumes forbidden
+        if 'CH11' not in excluded_rules:
+            for vol in (spec.volumes or []):
+                if vol.host_path:
+                    violations.append(
+                        f"[CH11] volume '{vol.name}' uses hostPath "
+                        f"(path='{vol.host_path.path}') — "
+                        "direct access to worker node filesystem is forbidden"
+                    )
+
+        # --- Container-level checks ------------------------------------------
+
+        all_containers = list(spec.init_containers or []) + list(spec.containers or [])
+
+        for container in all_containers:
+            cname = container.name
+            csc = container.security_context  # V1SecurityContext or None
+
+            robot_logger.debug(
+                f"[CH]   container='{cname}' "
+                f"image='{container.image}' "
+                f"has_security_context={csc is not None}"
+            )
+
+            # CH1: Run as non-root
+            if 'CH1' not in excluded_rules:
+                pod_run_as_non_root = pod_sc.run_as_non_root if pod_sc else None
+                csc_run_as_non_root = csc.run_as_non_root if csc else None
+                effective_run_as_non_root = (
+                    csc_run_as_non_root
+                    if csc_run_as_non_root is not None
+                    else pod_run_as_non_root
+                )
+                if not effective_run_as_non_root:
+                    violations.append(
+                        f"[CH1] container '{cname}': runAsNonRoot is not true "
+                        "(must be set at pod or container securityContext)"
+                    )
+
+                pod_run_as_user = pod_sc.run_as_user if pod_sc else None
+                csc_run_as_user = csc.run_as_user if csc else None
+                effective_run_as_user = (
+                    csc_run_as_user
+                    if csc_run_as_user is not None
+                    else pod_run_as_user
+                )
+                if effective_run_as_user == 0:
+                    violations.append(
+                        f"[CH1] container '{cname}': runAsUser=0 (root user is forbidden)"
+                    )
+
+            # CH2: Privileged mode forbidden
+            if 'CH2' not in excluded_rules:
+                if csc and csc.privileged is True:
+                    violations.append(
+                        f"[CH2] container '{cname}': privileged=true — "
+                        "privileged mode is forbidden"
+                    )
+                csc_ape = csc.allow_privilege_escalation if csc else None
+                if csc_ape is not False:
+                    violations.append(
+                        f"[CH2] container '{cname}': allowPrivilegeEscalation "
+                        f"is '{csc_ape}' — must be explicitly set to false"
+                    )
+
+            # CH4: Read-only root filesystem
+            if 'CH4' not in excluded_rules:
+                csc_ro = csc.read_only_root_filesystem if csc else None
+                if not csc_ro:
+                    violations.append(
+                        f"[CH4] container '{cname}': readOnlyRootFilesystem is not true"
+                    )
+
+            # CH5: Linux capabilities must be dropped
+            if 'CH5' not in excluded_rules:
+                caps = csc.capabilities if csc else None
+                if caps is None:
+                    violations.append(
+                        f"[CH5] container '{cname}': no capabilities block defined "
+                        "(capabilities.drop: [ALL] is required)"
+                    )
+                else:
+                    drop_list = [str(c).upper() for c in (caps.drop or [])]
+                    if 'ALL' not in drop_list:
+                        violations.append(
+                            f"[CH5] container '{cname}': capabilities.drop does not contain "
+                            f"'ALL' (actual drop={caps.drop or []})"
+                        )
+                    if caps.add:
+                        violations.append(
+                            f"[CH5] container '{cname}': capabilities.add is set "
+                            f"(forbidden additions={caps.add})"
+                        )
+
+            # CH6: Seccomp profile must be RuntimeDefault
+            if 'CH6' not in excluded_rules:
+                pod_seccomp = pod_sc.seccomp_profile if pod_sc else None
+                csc_seccomp = csc.seccomp_profile if csc else None
+                effective_seccomp = (
+                    csc_seccomp if csc_seccomp is not None else pod_seccomp
+                )
+                if effective_seccomp is None or effective_seccomp.type != 'RuntimeDefault':
+                    actual_type = effective_seccomp.type if effective_seccomp else 'not set'
+                    violations.append(
+                        f"[CH6] container '{cname}': seccompProfile.type='{actual_type}' "
+                        "(must be 'RuntimeDefault')"
+                    )
+
+            # CH7: Bidirectional mount propagation forbidden
+            if 'CH7' not in excluded_rules:
+                for vm in (container.volume_mounts or []):
+                    if vm.mount_propagation == 'Bidirectional':
+                        violations.append(
+                            f"[CH7] container '{cname}': volumeMount '{vm.name}' "
+                            f"at '{vm.mount_path}' uses Bidirectional mount propagation "
+                            "(forbidden)"
+                        )
+
+            # CH8: Forbidden ports
+            if 'CH8' not in excluded_rules:
+                for port in (container.ports or []):
+                    if port.container_port in _FORBIDDEN_PORTS:
+                        violations.append(
+                            f"[CH8] container '{cname}': containerPort "
+                            f"{port.container_port} is in the forbidden port list"
+                        )
+
+            # CH9: Image tag required
+            if 'CH9' not in excluded_rules:
+                image = container.image or ''
+                if ':' not in image:
+                    violations.append(
+                        f"[CH9] container '{cname}': image '{image}' has no tag "
+                        "(a tag is required, e.g. my-app:1.2.3 or my-app:latest)"
+                    )
+
+            # CH12: Secrets must not be exposed as environment variables
+            if 'CH12' not in excluded_rules:
+                for env_var in (container.env or []):
+                    if env_var.value_from and env_var.value_from.secret_key_ref:
+                        violations.append(
+                            f"[CH12] container '{cname}': env var '{env_var.name}' "
+                            "uses secretKeyRef — secrets must be mounted as files, "
+                            "not exposed as environment variables"
+                        )
+                for env_from in (container.env_from or []):
+                    if env_from.secret_ref:
+                        secret_name = (env_from.secret_ref.name or '(unnamed)')
+                        violations.append(
+                            f"[CH12] container '{cname}': envFrom includes "
+                            f"secretRef '{secret_name}' — secrets must be mounted as files"
+                        )
+
+        return violations
