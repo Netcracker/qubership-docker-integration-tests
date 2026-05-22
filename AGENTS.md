@@ -42,6 +42,16 @@ Published as `ghcr.io/netcracker/qubership-docker-integration-tests`.
   `libdoc` reference for `PlatformLibrary`.
 - `/requirements.txt`, `/test-requirements.txt` — pinned runtime and test
   dependencies (Robot Framework 7.4.2, `kubernetes`, `boto3`, `pytest`, ...).
+- `/container-hardening/` — standalone component that verifies Kubernetes
+  container security hardening rules (CH1–CH12) across all pods in a namespace:
+  - `docker/Dockerfile` — extends BDI; published as
+    `ghcr.io/netcracker/qubership-docker-integration-tests-hardening`.
+  - `robot/tests/container_hardening/container_hardening.robot` — generic
+    Robot suite, driven by `PART_OF` and `EXCLUSIONS_JSON` env vars.
+  - `helm/container-hardening/` — Helm chart that runs the suite as a
+    `post-install,post-upgrade` Job (fails the Helm release if tests fail).
+  - `docker-transfer/Dockerfile` — `FROM scratch` artifact image that packages
+    the Helm chart for CI / App Deployer consumption.
 
 ## Contracts Downstream Images Depend On
 

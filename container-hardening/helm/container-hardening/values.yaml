@@ -20,7 +20,7 @@ containerHardening:
   exclusions: {}
 
   # How long Kubernetes keeps the finished Job before automatic deletion (seconds).
-  ttlSecondsAfterFinished: 120
+  ttlSecondsAfterFinished: 600
 
   resources:
     requests:
