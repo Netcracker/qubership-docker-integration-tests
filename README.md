@@ -19,6 +19,7 @@ includes `python` interpreter, Robot Framework, some useful tools such as
       * [`analyze results`](#analyze-results)
       * [`write status`](#write-status)
   * [Environment Variables](#environment-variables)
+  * [Container Hardening Tests](#container-hardening-tests)
 
 ## Pre-installed tools
 
@@ -307,3 +308,14 @@ These variables enable automatic upload of test results and reports to S3-compat
 
 All ATP Storage variables except `ENVIRONMENT_NAME` it is recommended to override in the Docker file and do not
 forward them to the integration tests deployment environment.
+
+## Container Hardening Tests
+
+BDI ships a ready-to-use component for verifying Kubernetes container security
+hardening rules (CH1–CH12) across any namespace. It is located in
+[`container-hardening/`](container-hardening/README.md) and can be deployed
+as a standalone Helm chart that runs as a `post-install`/`post-upgrade` Job and
+fails the release if any violations are found.
+
+See [container-hardening/README.md](container-hardening/README.md) for
+deployment parameters and usage examples.

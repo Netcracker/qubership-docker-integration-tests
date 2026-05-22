@@ -12,6 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import ssl
 import time
 from typing import Dict, List, Optional, Union
@@ -1708,12 +1709,15 @@ class PlatformLibrary(object):
 
     def check_container_hardening(
         self,
-        part_of: Union[str, List[str]],
+        part_of: Optional[Union[str, List[str]]] = None,
         namespace: Optional[str] = None,
         exclusions: Optional[Dict[str, str]] = None,
     ) -> None:
-        """Verifies container security hardening rules CH1–CH12 for all pods whose
-        ``app.kubernetes.io/part-of`` label matches one of the given values.
+        """Verifies container security hardening rules CH1–CH12 for pods in the namespace.
+
+        When ``part_of`` is provided, only pods whose ``app.kubernetes.io/part-of`` label
+        matches one of the given values are checked. When ``part_of`` is omitted or ``None``,
+        **all** pods in the namespace are checked.
 
         Rules checked:
 
@@ -1731,20 +1735,35 @@ class PlatformLibrary(object):
         | CH11 | hostPath volumes forbidden |
         | CH12 | Secrets must not be exposed as environment variables |
 
-        :param part_of: single value or list of values for the ``app.kubernetes.io/part-of`` label
-        :param namespace: target namespace; defaults to the current pod's namespace when in-cluster
+        :param part_of: single value or list of values for the ``app.kubernetes.io/part-of`` label.
+                        When ``None`` or an empty list, all pods in the namespace are checked.
+        :param namespace: target namespace; defaults to the ``KUBE_NAMESPACE`` env var when omitted
         :param exclusions: mapping of ``app.kubernetes.io/name`` → comma-separated rule IDs to skip.
                            Use the special key ``_all`` to skip rules for every pod regardless of name,
                            e.g. ``{"_all": "CH6", "zookeeper-backup-daemon": "CH1,CH10"}``
 
-        Example:
+        Example — filter by part-of label:
 
         | ${part_of}=     Create List         qubership-kafka
         | ${exclusions}=  Create Dictionary   _all=CH6   zookeeper-backup-daemon=CH1,CH10
         | Check Container Hardening   ${part_of}   kafka-namespace   ${exclusions}
+
+        Example — check all pods in current namespace:
+
+        | Check Container Hardening   exclusions=${exclusions}
         """
         if isinstance(part_of, str):
-            part_of = [part_of]
+            # Guard against Robot Framework passing the string 'None' when a variable
+            # was not assigned (Run Keyword If with no ELSE branch).
+            if part_of.strip().lower() == 'none' or not part_of.strip():
+                part_of = None
+            else:
+                part_of = [part_of]
+        if isinstance(part_of, list):
+            part_of = [p for p in part_of if p and str(p).strip().lower() != 'none']
+            if not part_of:
+                part_of = None
+        filter_by_part_of = bool(part_of)
         if exclusions is None:
             exclusions = {}
         if namespace is None:
@@ -1752,27 +1771,31 @@ class PlatformLibrary(object):
 
         robot_logger.info(
             f"[CH] Starting container hardening check | "
-            f"part-of={part_of} | namespace={namespace}"
+            f"part-of={part_of if filter_by_part_of else '(all pods)'} | namespace={namespace}"
         )
         if exclusions:
             robot_logger.info(f"[CH] Exclusions configured: {exclusions}")
 
         pods = self.get_pods(namespace)
-        target_pods = [
-            pod for pod in pods
-            if pod.metadata.labels
-            and pod.metadata.labels.get('app.kubernetes.io/part-of') in part_of
-        ]
-
-        robot_logger.info(
-            f"[CH] Found {len(target_pods)} pod(s) matching "
-            f"app.kubernetes.io/part-of in {part_of}"
-        )
-
-        if not target_pods:
-            robot_logger.warn(
-                f"[CH] No pods found with app.kubernetes.io/part-of in {part_of} "
-                f"in namespace '{namespace}'. Check that the label is set correctly."
+        if filter_by_part_of:
+            target_pods = [
+                pod for pod in pods
+                if pod.metadata.labels
+                and pod.metadata.labels.get('app.kubernetes.io/part-of') in part_of
+            ]
+            robot_logger.info(
+                f"[CH] Found {len(target_pods)} pod(s) matching "
+                f"app.kubernetes.io/part-of in {part_of}"
+            )
+            if not target_pods:
+                robot_logger.warn(
+                    f"[CH] No pods found with app.kubernetes.io/part-of in {part_of} "
+                    f"in namespace '{namespace}'. Check that the label is set correctly."
+                )
+        else:
+            target_pods = list(pods)
+            robot_logger.info(
+                f"[CH] Checking all {len(target_pods)} pod(s) in namespace '{namespace}'"
             )
 
         global_excluded = {r.strip() for r in exclusions.get('_all', '').split(',') if r.strip()}
