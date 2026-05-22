@@ -1,4 +1,4 @@
-FROM ghcr.io/netcracker/qubership-docker-integration-tests:feature-container-hardening
+FROM ghcr.io/netcracker/qubership-docker-integration-tests:main
 
 RUN mkdir -p ${ROBOT_HOME}
 
