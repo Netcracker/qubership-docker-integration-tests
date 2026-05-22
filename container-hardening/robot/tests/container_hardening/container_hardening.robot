@@ -7,6 +7,7 @@ Library    String
 *** Variables ***
 ${PART_OF}          %{PART_OF=}
 ${EXCLUSIONS_JSON}  %{EXCLUSIONS_JSON=}
+${NAMESPACE}  %{KUBE_NAMESPACE=}
 
 *** Test Cases ***
 Test Container Hardening
@@ -18,4 +19,4 @@ Test Container Hardening
     ${part_of}=    Run Keyword If    '${PART_OF}' != ''
     ...    Split String    ${PART_OF}    ,
     ${exclusions}=    Evaluate    json.loads('${EXCLUSIONS_JSON}') if '${EXCLUSIONS_JSON}' else {}    json
-    Check Container Hardening    ${part_of}    exclusions=${exclusions}
+    Check Container Hardening    ${part_of}  ${NAMESPACE}  ${exclusions}
