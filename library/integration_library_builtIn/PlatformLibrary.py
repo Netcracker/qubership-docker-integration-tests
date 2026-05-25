@@ -26,6 +26,7 @@ from kubernetes.stream import stream
 from robot.api import logger as robot_logger
 from KubernetesClient import KubernetesClient
 from OpenShiftClient import OpenShiftClient  # noqa: F401
+from kubernetes.client.configuration import Configuration
 
 # Forbidden container ports per CH8 rule (security hardening).
 _FORBIDDEN_PORTS = frozenset(
