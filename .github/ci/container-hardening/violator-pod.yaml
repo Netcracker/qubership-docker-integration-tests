@@ -1,0 +1,34 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: violator-pod
+  labels:
+    app.kubernetes.io/name: violator-pod
+    app.kubernetes.io/part-of: ci-test
+spec:
+  restartPolicy: Never
+  # hostPID violates CH3; hostNetwork violates CH10
+  hostPID: false
+  hostIPC: false
+  securityContext:
+    # No seccompProfile → violates CH6
+    # runAsUser: 0 → violates CH1
+    runAsUser: 0
+  containers:
+    - name: main
+      image: busybox:1.36
+      command: ["sh", "-c", "sleep 3600"]
+      securityContext:
+        # privileged: true → violates CH2
+        privileged: true
+        allowPrivilegeEscalation: true
+        # No readOnlyRootFilesystem → violates CH4
+        readOnlyRootFilesystem: false
+        # No capabilities.drop → violates CH5
+      resources:
+        requests:
+          memory: "32Mi"
+          cpu: "10m"
+        limits:
+          memory: "64Mi"
+          cpu: "50m"

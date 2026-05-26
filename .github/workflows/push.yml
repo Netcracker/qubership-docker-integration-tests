@@ -55,6 +55,7 @@ jobs:
           - name: qubership-docker-integration-tests-hardening
             file: container-hardening/docker/Dockerfile
             context: container-hardening
+            build_args: "BASE_TAG"
           - name: qubership-docker-integration-tests-hardening-transfer
             file: container-hardening/docker-transfer/Dockerfile
             context: .
@@ -102,6 +103,7 @@ jobs:
           provenance: false
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          build-args: ${{ matrix.component.build_args == 'BASE_TAG' && format('BASE_TAG={0}', steps.meta.outputs.version) || '' }}
       - uses: actions/delete-package-versions@v5
         with:
           package-name: ${{ matrix.component.name }}

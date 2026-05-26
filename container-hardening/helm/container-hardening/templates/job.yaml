@@ -39,7 +39,7 @@ spec:
       containers:
         - name: {{ include "container-hardening.name" . }}
           image: {{ include "container-hardening.findImage" . | trim }}
-          imagePullPolicy: Always
+          imagePullPolicy: {{ .Values.containerHardening.imagePullPolicy | default "Always" }}
           args: ["run-robot-without-ttyd"]
           env:
             - name: TAGS

@@ -6,6 +6,10 @@ containerHardening:
   # Container image for the hardening test runner.
   image: "ghcr.io/netcracker/qubership-docker-integration-tests-hardening:main"
 
+  # Image pull policy for the test runner container.
+  # Use IfNotPresent when the image is pre-loaded into the cluster (e.g. kind CI).
+  imagePullPolicy: "Always"
+
   # Comma-separated list of app.kubernetes.io/part-of label values to filter pods.
   # When empty, all pods in the release namespace are checked.
   # Example: "kafka,kafka-services"
