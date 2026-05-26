@@ -1,4 +1,5 @@
-FROM ghcr.io/netcracker/qubership-docker-integration-tests:main
+ARG BASE_TAG=main
+FROM ghcr.io/netcracker/qubership-docker-integration-tests:${BASE_TAG}
 
 RUN mkdir -p ${ROBOT_HOME}
 
