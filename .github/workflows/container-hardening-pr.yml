@@ -34,7 +34,7 @@ jobs:
           HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
           REPO_OWNER: ${{ github.repository_owner }}
         run: |
-          tag=$(echo "${HEAD_BRANCH}" | sed 's|[^a-zA-Z0-9._-]|-|g')
+          tag="${HEAD_BRANCH//[^a-zA-Z0-9._-]/-}"
           echo "HARDENING_TAG=${tag}" >> $GITHUB_ENV
           echo "HARDENING_IMAGE=ghcr.io/${REPO_OWNER}/qubership-docker-integration-tests-hardening:${tag}" >> $GITHUB_ENV
 
