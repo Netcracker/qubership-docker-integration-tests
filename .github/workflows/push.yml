@@ -8,7 +8,13 @@ on:
     branches:
       - '**'
     paths-ignore:
-      - '.github/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/auto-labeler-config.yaml'
+      - '.github/dependabot.yaml'
+      - '.github/release-drafter-config.yml'
+      - '.github/super-linter.env'
+      - '.github/linters/**'
       - 'docs/**'
       - 'CODE-OF-CONDUCT.md'
       - 'CONTRIBUTING.md'
@@ -19,7 +25,13 @@ on:
     branches:
       - '**'
     paths-ignore:
-      - '.github/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/auto-labeler-config.yaml'
+      - '.github/dependabot.yaml'
+      - '.github/release-drafter-config.yml'
+      - '.github/super-linter.env'
+      - '.github/linters/**'
       - 'docs/**'
       - 'CODE-OF-CONDUCT.md'
       - 'CONTRIBUTING.md'
@@ -40,7 +52,9 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  multiplatform_build:
+  # Images that have no dependency on other images in this repository.
+  # Run in parallel via the matrix.
+  build-base:
     if: github.event.pull_request.user.login != 'dependabot[bot]' || github.event_name == 'pull_request'
     strategy:
       fail-fast: false
@@ -52,9 +66,6 @@ jobs:
           - name: qubership-docker-integration-tests-debian
             file: debian-build/Dockerfile
             context: .
-          - name: qubership-docker-integration-tests-hardening
-            file: container-hardening/docker/Dockerfile
-            context: container-hardening
           - name: qubership-docker-integration-tests-hardening-transfer
             file: container-hardening/docker-transfer/Dockerfile
             context: .
@@ -63,48 +74,29 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v6
-      - name: Docker meta
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: |
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.component.name }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Get package IDs for delete
-        id: get-ids-for-delete
-        uses: Netcracker/get-package-ids@v0.0.1
+      - name: Build & push image
+        uses: ./.github/actions/build-docker-image
         with:
           component-name: ${{ matrix.component.name }}
-          component-tag: ${{ steps.meta.outputs.tags }}
-          access-token: ${{ secrets.GITHUB_TOKEN }}
-        if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
-      - name: Build and push
-        uses: docker/build-push-action@v6
-        with:
-          no-cache: true
-          context: ${{ matrix.component.context }}
           file: ${{ matrix.component.file }}
-          platforms: linux/amd64,linux/arm64
-          # See https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
-          push: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
-          provenance: false
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-      - uses: actions/delete-package-versions@v5
+          context: ${{ matrix.component.context }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Builds FROM qubership-docker-integration-tests at the same git ref, so it
+  # must wait for build-base to publish the base image first.
+  build-hardening:
+    needs: build-base
+    if: github.event.pull_request.user.login != 'dependabot[bot]' || github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    name: qubership-docker-integration-tests-hardening
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+      - name: Build & push image
+        uses: ./.github/actions/build-docker-image
         with:
-          package-name: ${{ matrix.component.name }}
-          package-type: 'container'
-          package-version-ids: ${{ steps.get-ids-for-delete.outputs.ids-for-delete }}
-        if: ${{ steps.get-ids-for-delete.outputs.ids-for-delete != '' }}
+          component-name: qubership-docker-integration-tests-hardening
+          file: container-hardening/docker/Dockerfile
+          context: container-hardening
+          use-base-tag: 'true'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
