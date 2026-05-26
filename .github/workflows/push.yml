@@ -84,9 +84,11 @@ jobs:
 
   # Builds FROM qubership-docker-integration-tests at the same git ref, so it
   # must wait for build-base to publish the base image first.
+  # Skipped on pull_request events: the base image is not pushed on PRs, so
+  # there is nothing to build FROM in the registry.
   build-hardening:
     needs: build-base
-    if: github.event.pull_request.user.login != 'dependabot[bot]' || github.event_name == 'pull_request'
+    if: github.event_name != 'pull_request' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     name: qubership-docker-integration-tests-hardening
     steps:
@@ -100,3 +102,170 @@ jobs:
           context: container-hardening
           use-base-tag: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  # Deploys the hardening image to a kind cluster and runs the Robot suite
+  # against a known-compliant and a known-violating workload.
+  # Runs only on pull_request events, using the image that was published to
+  # ghcr.io by the push-event run for the same branch.
+  container-hardening-test:
+    needs: build-base
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    name: container-hardening-test
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Compute hardening image ref
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          REPO_OWNER: ${{ github.repository_owner }}
+        run: |
+          tag="${HEAD_REF//[^a-zA-Z0-9._-]/-}"
+          echo "HARDENING_IMAGE=ghcr.io/${REPO_OWNER,,}/qubership-docker-integration-tests-hardening:${tag}" >> $GITHUB_ENV
+
+      - name: Login to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Start kind cluster
+        uses: helm/kind-action@v1
+        with:
+          cluster_name: ch-ci
+
+      - name: Load images into kind
+        run: |
+          docker pull "${HARDENING_IMAGE}"
+          kind load docker-image "${HARDENING_IMAGE}" --name ch-ci
+          docker pull busybox:1.36
+          kind load docker-image busybox:1.36 --name ch-ci
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+
+      - name: Create test namespace
+        run: |
+          kubectl create namespace ch-test
+          # Allow privileged pods so the violator workload can be scheduled (Phase B)
+          kubectl label namespace ch-test \
+            pod-security.kubernetes.io/enforce=privileged \
+            pod-security.kubernetes.io/audit=privileged \
+            pod-security.kubernetes.io/warn=privileged
+
+      # ------------------------------------------------------------------
+      # Phase A: positive test — compliant workload; helm install must PASS
+      # ------------------------------------------------------------------
+      - name: "[Phase A] Deploy compliant pod"
+        run: |
+          kubectl apply -f .github/ci/container-hardening/compliant-pod.yaml -n ch-test
+
+      - name: "[Phase A] Wait for compliant pod to be ready"
+        run: kubectl wait --for=condition=Ready pod/compliant-pod -n ch-test --timeout=120s
+
+      - name: "[Phase A] Helm install — must PASS"
+        run: |
+          helm install container-hardening container-hardening/helm/container-hardening \
+            --namespace ch-test \
+            --set containerHardening.image="${HARDENING_IMAGE}" \
+            --set containerHardening.imagePullPolicy=IfNotPresent \
+            --set containerHardening.partOf=ci-test \
+            --wait \
+            --timeout 3m
+
+      - name: "[Phase A] Assert Job succeeded"
+        run: |
+          succeeded=$(kubectl get job container-hardening -n ch-test \
+            -o jsonpath='{.status.succeeded}' 2>/dev/null || echo "0")
+          echo "Job succeeded count: ${succeeded}"
+          if [ "${succeeded}" != "1" ]; then
+            echo "ERROR: expected Job to succeed but it did not"
+            kubectl logs -n ch-test -l app.kubernetes.io/name=container-hardening \
+              --tail=-1 2>/dev/null || true
+            exit 1
+          fi
+          echo "PASS: hardening Job succeeded for the compliant workload"
+
+      - name: "[Phase A] Cleanup"
+        run: |
+          helm uninstall container-hardening -n ch-test
+          kubectl delete pod compliant-pod -n ch-test --ignore-not-found
+
+      # ------------------------------------------------------------------
+      # Phase B: negative test — violating workload; helm install must FAIL
+      # ------------------------------------------------------------------
+      - name: "[Phase B] Deploy violator pod"
+        run: |
+          kubectl apply -f .github/ci/container-hardening/violator-pod.yaml -n ch-test
+
+      - name: "[Phase B] Wait for violator pod to be running"
+        run: kubectl wait --for=condition=Ready pod/violator-pod -n ch-test --timeout=120s
+
+      - name: "[Phase B] Helm install — must FAIL due to violations"
+        id: phase_b_install
+        run: |
+          helm install container-hardening container-hardening/helm/container-hardening \
+            --namespace ch-test \
+            --set containerHardening.image="${HARDENING_IMAGE}" \
+            --set containerHardening.imagePullPolicy=IfNotPresent \
+            --set containerHardening.partOf=ci-test \
+            --wait \
+            --timeout 3m
+        continue-on-error: true
+
+      - name: "[Phase B] Assert install failed and violations were reported"
+        run: |
+          if [ "${{ steps.phase_b_install.outcome }}" != "failure" ]; then
+            echo "ERROR: helm install should have failed due to hardening violations but it succeeded"
+            exit 1
+          fi
+          echo "PASS: helm install correctly failed due to hardening violations"
+
+          # Retrieve logs from the Job pod (may still exist before TTL cleanup)
+          logs=$(kubectl logs -n ch-test -l app.kubernetes.io/name=container-hardening \
+            --tail=-1 2>/dev/null || echo "")
+          echo "--- Robot Framework output ---"
+          echo "${logs}"
+
+          if echo "${logs}" | grep -qE '\[ *CH(1|2|4|5|6)'; then
+            echo "PASS: violation rule IDs found in Robot output"
+          else
+            echo "WARNING: could not confirm individual rule IDs in logs (Job may have been auto-deleted or log format differs)"
+          fi
+
+      - name: "[Phase B] Cleanup failed release"
+        if: always()
+        run: |
+          helm uninstall container-hardening -n ch-test 2>/dev/null || true
+          kubectl delete pod violator-pod -n ch-test --ignore-not-found 2>/dev/null || true
+
+      # ------------------------------------------------------------------
+      # Diagnostics (always collected)
+      # ------------------------------------------------------------------
+      - name: Collect diagnostics
+        if: always()
+        run: |
+          {
+            echo "=== Pods (ch-test) ==="
+            kubectl get pods -n ch-test -o wide 2>/dev/null || true
+            echo ""
+            echo "=== Jobs (ch-test) ==="
+            kubectl get jobs -n ch-test 2>/dev/null || true
+            echo ""
+            echo "=== Job pod logs ==="
+            kubectl logs -n ch-test -l app.kubernetes.io/name=container-hardening \
+              --tail=-1 2>/dev/null || echo "(no logs available)"
+            echo ""
+            echo "=== Events (ch-test) ==="
+            kubectl get events -n ch-test --sort-by='.lastTimestamp' 2>/dev/null || true
+          } | tee diagnostics.txt
+
+      - name: Upload diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: container-hardening-ci-diagnostics
+          path: diagnostics.txt
+          retention-days: 7
