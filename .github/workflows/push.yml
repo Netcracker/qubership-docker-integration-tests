@@ -84,9 +84,11 @@ jobs:
 
   # Builds FROM qubership-docker-integration-tests at the same git ref, so it
   # must wait for build-base to publish the base image first.
+  # Skipped on pull_request events: the base image is not pushed on PRs, so
+  # there is nothing to build FROM in the registry.
   build-hardening:
     needs: build-base
-    if: github.event.pull_request.user.login != 'dependabot[bot]' || github.event_name == 'pull_request'
+    if: github.event_name != 'pull_request' && github.actor != 'dependabot[bot]'
     runs-on: ubuntu-latest
     name: qubership-docker-integration-tests-hardening
     steps:
