@@ -30,11 +30,13 @@ jobs:
           ref: ${{ github.event.workflow_run.head_sha }}
 
       - name: Compute image tag
+        env:
+          HEAD_BRANCH: ${{ github.event.workflow_run.head_branch }}
+          REPO_OWNER: ${{ github.repository_owner }}
         run: |
-          branch="${{ github.event.workflow_run.head_branch }}"
-          tag=$(echo "${branch}" | sed 's|[^a-zA-Z0-9._-]|-|g')
+          tag=$(echo "${HEAD_BRANCH}" | sed 's|[^a-zA-Z0-9._-]|-|g')
           echo "HARDENING_TAG=${tag}" >> $GITHUB_ENV
-          echo "HARDENING_IMAGE=ghcr.io/${{ github.repository_owner }}/qubership-docker-integration-tests-hardening:${tag}" >> $GITHUB_ENV
+          echo "HARDENING_IMAGE=ghcr.io/${REPO_OWNER}/qubership-docker-integration-tests-hardening:${tag}" >> $GITHUB_ENV
 
       - name: Login to ghcr.io
         uses: docker/login-action@v3
