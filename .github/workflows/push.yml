@@ -8,7 +8,13 @@ on:
     branches:
       - '**'
     paths-ignore:
-      - '.github/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/auto-labeler-config.yaml'
+      - '.github/dependabot.yaml'
+      - '.github/release-drafter-config.yml'
+      - '.github/super-linter.env'
+      - '.github/linters/**'
       - 'docs/**'
       - 'CODE-OF-CONDUCT.md'
       - 'CONTRIBUTING.md'
@@ -19,7 +25,13 @@ on:
     branches:
       - '**'
     paths-ignore:
-      - '.github/**'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE.md'
+      - '.github/auto-labeler-config.yaml'
+      - '.github/dependabot.yaml'
+      - '.github/release-drafter-config.yml'
+      - '.github/super-linter.env'
+      - '.github/linters/**'
       - 'docs/**'
       - 'CODE-OF-CONDUCT.md'
       - 'CONTRIBUTING.md'
