@@ -62,10 +62,10 @@ Common labels applied to all resources.
 helm.sh/chart: {{ include "container-hardening.chart" . }}
 {{ include "container-hardening.selectorLabels" . }}
 {{- if .Chart.AppVersion }}
-app.kubernetes.io/version: {{ .Chart.AppVersion | quote }}
+app.kubernetes.io/version: '{{ .Values.ARTIFACT_DESCRIPTOR_VERSION | trunc 63 | trimAll "-_." }}'
 {{- end }}
 app.kubernetes.io/managed-by: {{ .Release.Service }}
-app.kubernetes.io/part-of: '{{ .Values.PART_OF }}'
+app.kubernetes.io/part-of: '{{ .Values.PART_OF | trunc 63 | trimSuffix "-" }}'
 {{- with .Values.ARTIFACT_DESCRIPTOR_VERSION }}
 app.kubernetes.io/component-version: {{ . | trunc 63 | trimAll "-_." | toString | quote }}
 {{- end }}
@@ -76,7 +76,7 @@ Selector labels.
 */}}
 {{- define "container-hardening.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "container-hardening.name" . }}
-app.kubernetes.io/instance: {{ cat (include "container-hardening.name" .) .Values.DELIMITER .Release.Namespace | nospace | trunc 63 }}
+app.kubernetes.io/instance: {{ .Release.Name }}
 {{- end -}}
 
 {{/*

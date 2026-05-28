@@ -38,7 +38,7 @@ containerHardening:
 ARTIFACT_DESCRIPTOR_VERSION: ""
 
 # Part-of label applied to all resources.
-PART_OF: "container-hardening"
+PART_OF: "container-hardening-test"
 
 # Delimiter used when building app.kubernetes.io/instance values.
 DELIMITER: "-"
