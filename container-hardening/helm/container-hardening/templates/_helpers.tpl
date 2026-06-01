@@ -76,7 +76,7 @@ Selector labels.
 */}}
 {{- define "container-hardening.selectorLabels" -}}
 app.kubernetes.io/name: {{ include "container-hardening.name" . }}
-app.kubernetes.io/instance: {{ .Release.Name }}
+app.kubernetes.io/instance: {{ .Release.Name | trunc 63 | trimSuffix "-" }}
 {{- end -}}
 
 {{/*
