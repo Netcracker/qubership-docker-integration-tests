@@ -13,7 +13,7 @@ container-hardening/
 ├── docker/Dockerfile                  # Extends BDI; published as
 │                                      # ghcr.io/netcracker/qubership-docker-integration-tests-hardening
 ├── docker-transfer/Dockerfile         # FROM scratch — packages the Helm chart
-│                                      # for CI / App Deployer consumption
+│                                      # for CI consumption
 ├── helm/container-hardening/          # Helm chart
 │   ├── Chart.yaml
 │   ├── values.yaml
