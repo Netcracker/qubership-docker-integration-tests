@@ -1,8 +1,20 @@
 from pathlib import Path
 import os
 
+_DEFAULT_SECRETS_DIR = "/mnt/secrets/env"
 
-def get_variables(secret_dir="/mnt/secrets/env"):
+
+def get_variables(secret_dir=None):
+    """
+    Dynamic Robot Framework variable file.
+
+    Secret files under secret_dir override os.environ keys with the same name.
+    Directory: INTEGRATION_TESTS_SECRETS_DIR, or the optional Robot Variables
+    argument, defaulting to /mnt/secrets/env.
+    """
+    if secret_dir is None:
+        secret_dir = os.getenv("INTEGRATION_TESTS_SECRETS_DIR", _DEFAULT_SECRETS_DIR)
+
     variables = dict(os.environ)
 
     secret_path = Path(secret_dir)
