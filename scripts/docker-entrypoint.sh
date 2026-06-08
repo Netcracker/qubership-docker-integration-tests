@@ -85,7 +85,7 @@ run_robot() {
         if [[ "$excluded_tags" =~ ^-e[[:space:]]+(.*)$ ]]; then
             robot_args+=("-e" "${BASH_REMATCH[1]}")
         else
-            robot_args+=("$excluded_tags")
+            robot_args+=("-e" "$excluded_tags")
         fi
     fi
     robot_args+=("./tests")
@@ -96,11 +96,7 @@ run_robot() {
         "${ROBOT_HOME}/scripts/adapter-S3/adapter-S3-entrypoint.sh" "${robot_args[@]}"
     else
         echo "ATP report adapter disabled (ATP_REPORT_ENABLED!=true); running robot like upstream image"
-        if [[ -z "$TAGS" ]]; then
-            robot "${excluded_tags}" ./tests
-        else
-            robot -i "${TAGS}" "${excluded_tags}" ./tests
-        fi
+        robot "${robot_args[@]}"
     fi
 
     robot_result=$?
