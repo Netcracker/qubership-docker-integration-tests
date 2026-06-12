@@ -133,28 +133,28 @@ finalize_upload() {
     # Final sync to ensure all files are captured
     if [[ "$ATP_STORAGE_PROVIDER" == "aws" ]]; then
         : "${ALLURE_RESULTS_DIR:=${ROBOT_HOME}/output/allure-results}"
-        s5cmd --no-verify-ssl sync "$ALLURE_RESULTS_DIR/" "${RESULTS_S3_PATH}allure-results/"
-        s5cmd --no-verify-ssl sync "$TMP_DIR/attachments/" "$ATTACHMENTS_S3_PATH" 2>/dev/null || true
+        s5cmd --no-verify-ssl sync "$ALLURE_RESULTS_DIR/" "${RESULTS_S3_PATH}allure-results/" >/dev/null 2>&1
+        s5cmd --no-verify-ssl sync "$TMP_DIR/attachments/" "$ATTACHMENTS_S3_PATH" >/dev/null || true
         # Sync email-notification-generated only if it exists
         if [[ -d "$TMP_DIR/scripts/email-notification-generated" ]]; then
-            s5cmd --no-verify-ssl sync "$TMP_DIR/scripts/email-notification-generated/" "${RESULTS_S3_PATH}email-notification-generated/"
+            s5cmd --no-verify-ssl sync "$TMP_DIR/scripts/email-notification-generated/" "${RESULTS_S3_PATH}email-notification-generated/" >/dev/null 2>&1
         fi
     elif [[ "$ATP_STORAGE_PROVIDER" == "minio" || "$ATP_STORAGE_PROVIDER" == "s3" ]]; then
         : "${ALLURE_RESULTS_DIR:=${ROBOT_HOME}/output/allure-results}"
-        s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" sync "$ALLURE_RESULTS_DIR/" "${RESULTS_S3_PATH}allure-results/"
-        s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" sync "$TMP_DIR/attachments/" "$ATTACHMENTS_S3_PATH" 2>/dev/null || true
+        s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" sync "$ALLURE_RESULTS_DIR/" "${RESULTS_S3_PATH}allure-results/" >/dev/null 2>&1
+        s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" sync "$TMP_DIR/attachments/" "$ATTACHMENTS_S3_PATH" >/dev/null || true
         # Sync email-notification-generated only if it exists
         if [[ -d "$TMP_DIR/scripts/email-notification-generated" ]]; then
-            s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" sync "$TMP_DIR/scripts/email-notification-generated/" "${RESULTS_S3_PATH}email-notification-generated/"
+            s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" sync "$TMP_DIR/scripts/email-notification-generated/" "${RESULTS_S3_PATH}email-notification-generated/" >/dev/null 2>&1
         fi
     fi
 
     # Upload marker file
     echo "${ENABLE_JIRA_INTEGRATION:-false}" >"$TMP_DIR/allure-results.uploaded"
     if [[ "$ATP_STORAGE_PROVIDER" == "aws" ]]; then
-        s5cmd --no-verify-ssl cp "$TMP_DIR/allure-results.uploaded" "${RESULTS_S3_PATH}allure-results.uploaded"
+        s5cmd --no-verify-ssl cp "$TMP_DIR/allure-results.uploaded" "${RESULTS_S3_PATH}allure-results.uploaded" >/dev/null 2>&1
     elif [[ "$ATP_STORAGE_PROVIDER" == "minio" || "$ATP_STORAGE_PROVIDER" == "s3" ]]; then
-        s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" cp "$TMP_DIR/allure-results.uploaded" "${RESULTS_S3_PATH}allure-results.uploaded"
+        s5cmd --no-verify-ssl --endpoint-url "$ATP_STORAGE_SERVER_URL" cp "$TMP_DIR/allure-results.uploaded" "${RESULTS_S3_PATH}allure-results.uploaded" >/dev/null 2>&1
     fi
 
     # Generate result URLs
