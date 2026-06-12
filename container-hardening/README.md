@@ -70,7 +70,7 @@ helm install container-hardening ./helm/container-hardening \
 | `containerHardening.image` | string | `ghcr.io/netcracker/qubership-docker-integration-tests-hardening:main` | Test runner image |
 | `containerHardening.partOf` | string | `""` | Comma-separated `app.kubernetes.io/part-of` values to filter pods. Empty = all pods in the namespace |
 | `containerHardening.exclusions` | map | `{}` | Per-component rule exclusions. Key is `app.kubernetes.io/name` (or `_all` for every pod), value is comma-separated rule IDs (e.g. `CH4, CH11`) |
-| `containerHardening.ttlSecondsAfterFinished` | int | `120` | How long Kubernetes keeps the finished Job before auto-deletion |
+| `containerHardening.ttlSecondsAfterFinished` | int | `86400` | How long Kubernetes keeps the finished Job before auto-deletion |
 | `containerHardening.resources.requests.memory` | string | `128Mi` | Memory request |
 | `containerHardening.resources.requests.cpu` | string | `100m` | CPU request |
 | `containerHardening.resources.limits.memory` | string | `256Mi` | Memory limit |

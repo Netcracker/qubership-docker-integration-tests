@@ -17,7 +17,7 @@ spec:
   completions: 1
   parallelism: 1
   {{- if or (gt .Capabilities.KubeVersion.Major "1") (ge .Capabilities.KubeVersion.Minor "12") }}
-  ttlSecondsAfterFinished: {{ .Values.containerHardening.ttlSecondsAfterFinished | default 600 }}
+  ttlSecondsAfterFinished: {{ .Values.containerHardening.ttlSecondsAfterFinished | default 86400 }}
   {{- end }}
   template:
     metadata:
