@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import os
 import re
 import sys
-import datetime
+import time
 from enum import Enum
 
 from PlatformLibrary import PlatformLibrary
+from kubernetes.client.exceptions import ApiException
+
+MAX_STATUS_UPDATE_RETRIES = 5
 
 
 class CustomResourceStatusResolver:
@@ -55,6 +59,20 @@ class CustomResourceStatusResolver:
     def update_custom_resource_status_condition(self, condition):
         self.check_cr_path()
         client = PlatformLibrary(managed_by_operator="true")
+        for attempt in range(MAX_STATUS_UPDATE_RETRIES):
+            try:
+                self.patch_custom_resource_status_condition(client, condition)
+                return
+            except ApiException as e:
+                # 409 Conflict means the object was modified between our read and
+                # write (its resourceVersion moved). Re-fetch the latest object and
+                # retry; any other error is propagated immediately.
+                if e.status == 409 and attempt < MAX_STATUS_UPDATE_RETRIES - 1:
+                    time.sleep(0.5 * (attempt + 1))
+                    continue
+                raise
+
+    def patch_custom_resource_status_condition(self, client, condition):
         status_obj = client.get_namespaced_custom_object_status(self.group,
                                                                 self.version,
                                                                 self.namespace,
@@ -100,6 +118,7 @@ class ConditionStatus(Enum):
 
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
+
 
 class Condition:
     def __init__(self,
