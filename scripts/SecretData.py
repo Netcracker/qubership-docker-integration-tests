@@ -27,9 +27,7 @@ def get_variables(secret_dir=None):
     argument, defaulting to /mnt/secrets/env.
     """
     if secret_dir is None:
-        secret_dir = os.getenv(
-            "INTEGRATION_TESTS_SECRETS_DIR", _DEFAULT_SECRETS_DIR
-        )
+        secret_dir = os.getenv("INTEGRATION_TESTS_SECRETS_DIR", _DEFAULT_SECRETS_DIR)
 
     variables = dict(os.environ)
 
@@ -42,8 +40,6 @@ def get_variables(secret_dir=None):
         if not file_path.is_file():
             continue
 
-        variables[file_path.name] = file_path.read_text(
-            encoding="utf-8"
-        ).rstrip("\r\n")
+        variables[file_path.name] = file_path.read_text(encoding="utf-8").rstrip("\r\n")
 
     return variables
