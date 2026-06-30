@@ -290,14 +290,19 @@ These variables enable automatic upload of test results and reports to S3-compat
 * `ATP_STORAGE_SERVER_UI_URL` - S3 UI URL for browsing uploaded files (optional, e.g., <https://minio-ui.example.com>)
 * `ATP_STORAGE_BUCKET` - S3 bucket name for storing test results (required when `ATP_REPORT_ENABLED` is true)
 * `ATP_STORAGE_REGION` - S3 region (optional, default: us-east-1). Required for AWS S3
+* `INTEGRATION_TESTS_SECRETS_DIR` - Directory where Kubernetes mounts integration test credentials as files. Set this to the secret volume `mountPath` when using file-based secrets. When unset, credentials are read from environment variables only (legacy `secretKeyRef` / docker-compose)
 * `ATP_STORAGE_USERNAME` - S3 credentials username:
   * For AWS S3: AWS Access Key ID
   * For MinIO: MinIO Access Key
   * Required when `ATP_REPORT_ENABLED` is true
+  * **Kubernetes (recommended):** file `{INTEGRATION_TESTS_SECRETS_DIR}/ATP_STORAGE_USERNAME`
+  * **Backward compatibility:** environment variable when the file is not present (docker-compose, legacy Helm charts with `secretKeyRef`)
 * `ATP_STORAGE_PASSWORD` - S3 credentials password:
   * For AWS S3: AWS Secret Access Key
   * For MinIO: MinIO Secret Key
   * Required when `ATP_REPORT_ENABLED` is true
+  * **Kubernetes (recommended):** file `{INTEGRATION_TESTS_SECRETS_DIR}/ATP_STORAGE_PASSWORD`
+  * **Backward compatibility:** environment variable when the file is not present (docker-compose, legacy Helm charts with `secretKeyRef`)
 * `ATP_REPORT_VIEW_UI_URL` - URL for viewing Allure reports (optional, e.g., <https://allure.example.com>)
 * `ENVIRONMENT_NAME` - Environment name for organizing test results in S3 (e.g., dev, staging, prod). Results are stored in: `s3://{bucket}/Result/{environment}/{date}/{time}/`
 * `UPLOAD_METHOD` - Upload method: `sync` (directory sync) or `cp` (file-by-file upload, default: sync)

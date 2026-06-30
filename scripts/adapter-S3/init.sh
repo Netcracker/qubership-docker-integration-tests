@@ -7,9 +7,37 @@ atp_report_upload() {
     [[ -n "${ATP_STORAGE_BUCKET:-}" ]]
 }
 
+read_atp_storage_credential() {
+    local var_name="$1"
+    local file_name="$2"
+    local file_path="${INTEGRATION_TESTS_SECRETS_DIR}/${file_name}"
+
+    if [[ -f "$file_path" && -r "$file_path" ]]; then
+        local val
+        val="$(tr -d '\n\r' <"$file_path")"
+        if [[ -n "$val" ]]; then
+            export "$var_name"="$val"
+        fi
+    fi
+}
+
+load_atp_storage_credentials() {
+    if [[ -z "${INTEGRATION_TESTS_SECRETS_DIR:-}" ]]; then
+        return 0
+    fi
+
+    echo "Loading ATP credentials from ${INTEGRATION_TESTS_SECRETS_DIR} (files override env when non-empty)"
+    ls -la "${INTEGRATION_TESTS_SECRETS_DIR}" 2>&1 || echo "WARN: cannot list ${INTEGRATION_TESTS_SECRETS_DIR}"
+
+    read_atp_storage_credential ATP_STORAGE_USERNAME ATP_STORAGE_USERNAME
+    read_atp_storage_credential ATP_STORAGE_PASSWORD ATP_STORAGE_PASSWORD
+}
+
 # Environment initialization module
 init_environment() {
     echo "Initializing environment..."
+
+    load_atp_storage_credentials
 
     # Compute current date and time
     if [[ -z "${CURRENT_DATE}" ]]; then
