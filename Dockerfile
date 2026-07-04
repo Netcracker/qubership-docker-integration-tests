@@ -1,5 +1,5 @@
 # hadolint global ignore=DL3008,DL3013,DL3018
-FROM python:3.14-alpine3.23
+FROM python:3.14-alpine3.24
 
 ENV ROBOT_HOME=/opt/robot \
     PYTHONPATH=/usr/local/lib/python3.14/site-packages/integration_library_builtIn \
