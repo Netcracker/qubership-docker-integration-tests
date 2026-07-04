@@ -11,4 +11,4 @@ robotframework-requests==0.9.7
 allure-robotframework==2.15.3
 robotframework==7.4.2
 setuptools~=82.0.1
-urllib3~=2.6.3
+urllib3~=2.7.0
