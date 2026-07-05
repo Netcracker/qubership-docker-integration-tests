@@ -35,6 +35,7 @@ RUN \
 RUN echo 'https://dl-cdn.alpinelinux.org/alpine/edge/testing' >> /etc/apk/repositories \
     && apk add --update --no-cache \
         s5cmd \
+        binutils \
     # Clean up
     && rm -rf /var/cache/apk/*
 
