@@ -1,5 +1,5 @@
 # hadolint global ignore=DL3008,DL3013,DL3018
-FROM python:3.14-alpine3.23
+FROM python:3.14-alpine3.24
 
 ENV ROBOT_HOME=/opt/robot \
     PYTHONPATH=/usr/local/lib/python3.14/site-packages/integration_library_builtIn \
@@ -15,7 +15,7 @@ COPY scripts/adapter-S3 ${ROBOT_HOME}/scripts/adapter-S3
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
-ARG PIP="25.3"
+ARG PIP="26.1.2"
 
 RUN \
     # Install dependencies
