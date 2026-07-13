@@ -15,13 +15,6 @@ if [[ "$DEBUG" == true ]]; then
     printenv
 fi
 
-_term() {
-    echo "SIGTERM received, shutting down robot..."
-    [[ -n "${robot_pid:-}" ]] && kill -TERM "$robot_pid" 2>/dev/null || true
-    exit 0
-}
-trap _term TERM INT
-
 run_custom_script() {
     if [[ -n "$CUSTOM_ENTRYPOINT_SCRIPT" ]]; then
         ${CUSTOM_ENTRYPOINT_SCRIPT}
@@ -131,18 +124,17 @@ custom)
     run_custom_script
     ;;
 run-robot)
-    run_robot &
-    robot_pid=$!
-    wait $robot_pid
-    echo "Starting ttyd..."
-    exec ttyd -p "${TTYD_PORT:-8080}" bash
+    echo "Starting ttyd immediately to satisfy liveness probe..."
+    # 1. We run ttyd immediately so port 8080 opens instantly.
+    # 2. ttyd runs a bash subshell that executes tests, then drops to an interactive shell.
+    exec ttyd -p "${TTYD_PORT:-8080}" bash -c '
+        run_robot
+        echo "Robot tests finished. Keeping ttyd session alive for debugging..."
+        bash
+    '
     ;;
 run-robot-without-ttyd)
-    run_robot &
-    robot_pid=$!
-    wait $robot_pid
-    robot_exit=$?
-    exit $robot_exit
+    run_robot
     ;;
 run-ttyd)
     exec ttyd -p "${TTYD_PORT:-8080}" bash

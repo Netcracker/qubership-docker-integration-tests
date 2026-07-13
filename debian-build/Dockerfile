@@ -1,8 +1,8 @@
 # hadolint global ignore=DL3013,DL3018
-FROM python:3.13-slim
+FROM python:3.14-slim
 
 ENV ROBOT_HOME=/opt/robot \
-    PYTHONPATH=/usr/local/lib/python3.13/site-packages/integration_library_builtIn \
+    PYTHONPATH=/usr/local/lib/python3.14/site-packages/integration_library_builtIn \
     IS_ANALYZER_RESULT_ENABLED=true \
     IS_TAGS_RESOLVER_ENABLED=true \
     STATUS_WRITING_ENABLED=false \
@@ -15,10 +15,13 @@ COPY scripts/adapter-S3 ${ROBOT_HOME}/scripts/adapter-S3
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
+ARG PIP="26.1.2"
+
 RUN \
     # Install dependencies
     apt-get update \
     && apt-get install -y --no-install-recommends \
+        tini \
         bash \
         passwd \
         vim \
@@ -51,7 +54,7 @@ RUN \
     && usermod -a -G 0 robot \
     # Install dependencies
     && python3 -m pip install --no-cache-dir --upgrade \
-        pip \
+        pip==${PIP} \
         setuptools \
     && python3 -m pip install --no-cache-dir -r ${ROBOT_HOME}/requirements.txt \
     && python3 -m pip install --no-cache-dir ${ROBOT_HOME}/integration-tests-built-in-library \
@@ -68,5 +71,5 @@ RUN \
 
 WORKDIR ${ROBOT_HOME}
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/docker-entrypoint.sh"]
 CMD ["run-robot"]

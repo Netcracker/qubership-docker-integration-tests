@@ -20,6 +20,7 @@ ARG PIP="26.1.2"
 RUN \
     # Install dependencies
     apk add --update --no-cache \
+        tini \
         bash \
         shadow \
         vim \
@@ -44,8 +45,8 @@ RUN \
     && useradd -s /bin/bash -r -g robot --uid=${USER_ID} robot \
     && usermod -a -G 0 robot \
     # Install dependencies
-    && python3 -m pip install --no-cache-dir --upgrade pip==${PIP} \
-        pip \
+    && python3 -m pip install --no-cache-dir --upgrade \
+        pip==${PIP} \
         setuptools \
     && python3 -m pip install --no-cache-dir -r ${ROBOT_HOME}/requirements.txt \
     && python3 -m pip install --no-cache-dir ${ROBOT_HOME}/integration-tests-built-in-library \
@@ -62,8 +63,5 @@ RUN \
 
 WORKDIR ${ROBOT_HOME}
 
-ENTRYPOINT ["/docker-entrypoint.sh"]
+ENTRYPOINT ["/usr/bin/tini", "--", "/docker-entrypoint.sh"]
 CMD ["run-robot"]
-
-
-
