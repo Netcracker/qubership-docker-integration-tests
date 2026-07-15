@@ -14,7 +14,6 @@
 
 import os
 import ssl
-import sys
 import time
 from typing import Dict, List, Optional, Union
 
@@ -23,7 +22,6 @@ import urllib3
 import yaml
 from deprecated import deprecated
 from kubernetes import client, config
-from kubernetes.client.configuration import Configuration
 from kubernetes.stream import stream
 from KubernetesClient import KubernetesClient
 from OpenShiftClient import OpenShiftClient  # noqa: F401
@@ -39,37 +37,57 @@ _FORBIDDEN_PORTS = frozenset(
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+SERVICE_ACCOUNT_CA = '/var/run/secrets/kubernetes.io/serviceaccount/ca.crt'
+
+
+def _create_ssl_context(configuration):
+    if not configuration.verify_ssl or not hasattr(ssl, 'VERIFY_X509_STRICT'):
+        return None
+    ca_file = configuration.ssl_ca_cert
+    if not ca_file or not os.path.isfile(ca_file):
+        ca_file = SERVICE_ACCOUNT_CA if os.path.isfile(SERVICE_ACCOUNT_CA) else None
+    if not ca_file:
+        return None
+    ssl_context = ssl.create_default_context(cafile=ca_file)
+    ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    if configuration.cert_file and configuration.key_file:
+        ssl_context.load_cert_chain(configuration.cert_file, configuration.key_file)
+    return ssl_context
+
+
+def patchK8sClient(api_client):
+    configuration = api_client.configuration
+    ssl_context = _create_ssl_context(configuration)
+    if ssl_context is None:
+        return api_client
+
+    pool_kwargs = {
+        'cert_reqs': ssl.CERT_REQUIRED,
+        'ssl_context': ssl_context,
+    }
+    retries = getattr(configuration, 'retries', None)
+    if retries is not None:
+        pool_kwargs['retries'] = retries
+    assert_hostname = getattr(configuration, 'assert_hostname', None)
+    if assert_hostname is not None:
+        pool_kwargs['assert_hostname'] = assert_hostname
+    tls_server_name = getattr(configuration, 'tls_server_name', None)
+    if tls_server_name:
+        pool_kwargs['server_hostname'] = tls_server_name
+
+    api_client.rest_client.pool_manager = urllib3.PoolManager(**pool_kwargs)
+    return api_client
+
 
 def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):
     try:
-        client_configuration = None
-        if sys.version_info >= (3, 13):
-            # https://docs.python.org/3/whatsnew/3.13.html#ssl
-            # Kubernetes client issue
-            # https://github.com/kubernetes-client/python/issues/2394#issuecomment-2884974440
-            client_configuration = Configuration()
-            client_configuration.verify_ssl = False
-
-        config.load_incluster_config(client_configuration)
-
-        return kubernetes.client.ApiClient(configuration=client_configuration)
+        config.load_incluster_config()
+        return patchK8sClient(kubernetes.client.ApiClient())
     except config.ConfigException:
         return patchK8sClient(kubernetes.config.new_client_from_config(
             config_file=config_file,
             context=context,
             persist_config=persist_config))
-
-
-def patchK8sClient(api_client):
-    ctx = ssl.create_default_context()
-    ctx.verify_flags = ctx.verify_flags & ~ssl.VERIFY_X509_STRICT
-
-    api_client.rest_client.pool_manager = urllib3.PoolManager(
-        num_pools=4,
-        ssl_context=ctx,
-        **api_client.rest_client.pool_manager.connection_pool_kw,
-    )
-    return api_client
 
 
 class PlatformLibrary(object):
