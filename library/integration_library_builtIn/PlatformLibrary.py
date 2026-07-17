@@ -14,7 +14,6 @@
 
 import os
 import ssl
-import sys
 import time
 from typing import Dict, List, Optional, Union
 
@@ -23,7 +22,6 @@ import urllib3
 import yaml
 from deprecated import deprecated
 from kubernetes import client, config
-from kubernetes.client.configuration import Configuration
 from kubernetes.stream import stream
 from KubernetesClient import KubernetesClient
 from OpenShiftClient import OpenShiftClient  # noqa: F401
@@ -31,45 +29,82 @@ from robot.api import logger as robot_logger
 
 # Forbidden container ports per CH8 rule (security hardening).
 _FORBIDDEN_PORTS = frozenset(
-    list(range(17, 996)) + [
-        1080, 1236, 1433, 1434, 1494, 1512, 1524, 1525,
-        1645, 1646, 1649, 1758, 1759, 1789, 1812, 1911, 26000,
+    list(range(17, 996))
+    + [
+        1080,
+        1236,
+        1433,
+        1434,
+        1494,
+        1512,
+        1524,
+        1525,
+        1645,
+        1646,
+        1649,
+        1758,
+        1759,
+        1789,
+        1812,
+        1911,
+        26000,
     ]
 )
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
+SERVICE_ACCOUNT_CA = "/var/run/secrets/kubernetes.io/serviceaccount/ca.crt"
 
-def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):
-    try:
-        client_configuration = None
-        if sys.version_info >= (3, 13):
-            # https://docs.python.org/3/whatsnew/3.13.html#ssl
-            # Kubernetes client issue
-            # https://github.com/kubernetes-client/python/issues/2394#issuecomment-2884974440
-            client_configuration = Configuration()
-            client_configuration.verify_ssl = False
 
-        config.load_incluster_config(client_configuration)
-
-        return kubernetes.client.ApiClient(configuration=client_configuration)
-    except config.ConfigException:
-        return patchK8sClient(kubernetes.config.new_client_from_config(
-            config_file=config_file,
-            context=context,
-            persist_config=persist_config))
+def _create_ssl_context(configuration):
+    if not configuration.verify_ssl or not hasattr(ssl, "VERIFY_X509_STRICT"):
+        return None
+    ca_file = configuration.ssl_ca_cert
+    if not ca_file or not os.path.isfile(ca_file):
+        ca_file = SERVICE_ACCOUNT_CA if os.path.isfile(SERVICE_ACCOUNT_CA) else None
+    if not ca_file:
+        return None
+    ssl_context = ssl.create_default_context(cafile=ca_file)
+    ssl_context.verify_flags &= ~ssl.VERIFY_X509_STRICT
+    if configuration.cert_file and configuration.key_file:
+        ssl_context.load_cert_chain(configuration.cert_file, configuration.key_file)
+    return ssl_context
 
 
 def patchK8sClient(api_client):
-    ctx = ssl.create_default_context()
-    ctx.verify_flags = ctx.verify_flags & ~ssl.VERIFY_X509_STRICT
+    configuration = api_client.configuration
+    ssl_context = _create_ssl_context(configuration)
+    if ssl_context is None:
+        return api_client
 
-    api_client.rest_client.pool_manager = urllib3.PoolManager(
-        num_pools=4,
-        ssl_context=ctx,
-        **api_client.rest_client.pool_manager.connection_pool_kw,
-    )
+    pool_kwargs = {
+        "cert_reqs": ssl.CERT_REQUIRED,
+        "ssl_context": ssl_context,
+    }
+    retries = getattr(configuration, "retries", None)
+    if retries is not None:
+        pool_kwargs["retries"] = retries
+    assert_hostname = getattr(configuration, "assert_hostname", None)
+    if assert_hostname is not None:
+        pool_kwargs["assert_hostname"] = assert_hostname
+    tls_server_name = getattr(configuration, "tls_server_name", None)
+    if tls_server_name:
+        pool_kwargs["server_hostname"] = tls_server_name
+
+    api_client.rest_client.pool_manager = urllib3.PoolManager(**pool_kwargs)
     return api_client
+
+
+def get_kubernetes_api_client(config_file=None, context=None, persist_config=True):
+    try:
+        config.load_incluster_config()
+        return patchK8sClient(kubernetes.client.ApiClient())
+    except config.ConfigException:
+        return patchK8sClient(
+            kubernetes.config.new_client_from_config(
+                config_file=config_file, context=context, persist_config=persist_config
+            )
+        )
 
 
 class PlatformLibrary(object):
@@ -109,13 +144,16 @@ class PlatformLibrary(object):
 
 
     """  # noqa: E501
-    ROBOT_LIBRARY_VERSION = '0.0.1'
 
-    def __init__(self,
-                 managed_by_operator="false",
-                 config_file=None,
-                 context=None,
-                 persist_config=True):
+    ROBOT_LIBRARY_VERSION = "0.0.1"
+
+    def __init__(
+        self,
+        managed_by_operator="false",
+        config_file=None,
+        context=None,
+        persist_config=True,
+    ):
         """A platform can be chosen between Kubernetes and OpenShift at library import time.
 
         Examples of `managed_by_operator` variable usage:
@@ -138,9 +176,9 @@ class PlatformLibrary(object):
         | Library   | PlatformLibrary |                                    |                       |                      | Default config file will be used with current context for provided file, GCP token will be refreshed       |
         """  # noqa: E501
 
-        self.k8s_api_client = get_kubernetes_api_client(config_file=config_file,
-                                                        context=context,
-                                                        persist_config=persist_config)
+        self.k8s_api_client = get_kubernetes_api_client(
+            config_file=config_file, context=context, persist_config=persist_config
+        )
 
         self.platform_client = KubernetesClient(self.k8s_api_client)
         self.k8s_apps_v1_client = self.platform_client.k8s_apps_v1_client
@@ -159,13 +197,10 @@ class PlatformLibrary(object):
         Example:
         | Get Custom Resources | v1alpha1 | integreatly.org | prometheus-operator |
         """
-        group, version = api_version.split('/')
+        group, version = api_version.split("/")
         return self.custom_objects_api.list_namespaced_custom_object(
-            group=group,
-            version=version,
-            namespace=namespace,
-            plural=kind.lower() + 's'
-        )['items']
+            group=group, version=version, namespace=namespace, plural=kind.lower() + "s"
+        )["items"]
 
     def get_custom_resource(self, api_version: str, kind: str, namespace: str, name: str) -> dict:
         """
@@ -178,13 +213,13 @@ class PlatformLibrary(object):
         Example:
         | Get Custom Resource | v1alpha1 | integreatly.org | prometheus-operator | test_dashboard |
         """
-        group, version = api_version.split('/')
+        group, version = api_version.split("/")
         return self.custom_objects_api.get_namespaced_custom_object(
             group=group,
             version=version,
             namespace=namespace,
-            plural=kind.lower() + 's',
-            name=name
+            plural=kind.lower() + "s",
+            name=name,
         )
 
     def get_ingress_api_version(self):
@@ -242,11 +277,11 @@ class PlatformLibrary(object):
         | Get Routes | cassandra |
         """
         return self.custom_objects_api.list_namespaced_custom_object(
-            group='route.openshift.io',
-            version='v1',
+            group="route.openshift.io",
+            version="v1",
             namespace=namespace,
-            plural='routes'
-        )['items']
+            plural="routes",
+        )["items"]
 
     def get_route(self, name: str, namespace: str) -> dict:
         """
@@ -260,11 +295,11 @@ class PlatformLibrary(object):
         | Get Route | cassandra-route | cassandra |
         """
         return self.custom_objects_api.get_namespaced_custom_object(
-            group='route.openshift.io',
-            version='v1',
+            group="route.openshift.io",
+            version="v1",
             namespace=namespace,
-            plural='routes',
-            name=name
+            plural="routes",
+            name=name,
         )
 
     def get_route_url(self, name, namespace):
@@ -291,8 +326,9 @@ class PlatformLibrary(object):
         Example:
         | Create Namespaced Custom Object | integreatly.org | v1alpha1 | prometheus-operator | grafanadashboards | dashboard_body |
         """  # noqa: E501
-        return self.custom_objects_api.create_namespaced_custom_object(group, version, namespace, plural, body,
-                                                                       pretty='true')
+        return self.custom_objects_api.create_namespaced_custom_object(
+            group, version, namespace, plural, body, pretty="true"
+        )
 
     def get_namespaced_custom_object(self, group, version, namespace, plural, name):
         """Returns existing Kubernetes custom object by provided group, version, plural, name in project/namespace.
@@ -438,14 +474,13 @@ class PlatformLibrary(object):
         Example:
         | Get Service Selector | cassandra-dc-dc1 | cassandra |
         """
-        service = self.k8s_core_v1_client.read_namespaced_service(
-            name, namespace)
+        service = self.k8s_core_v1_client.read_namespaced_service(name, namespace)
         return service.spec.selector
 
     def get_deployment_entity(self, name: str, namespace: str):
         """Returns `deployment/deployment config` configuration.
-         Example:
-         | Get Deployment Entity | elasticsearch-1 | elasticsearch-service |
+        Example:
+        | Get Deployment Entity | elasticsearch-1 | elasticsearch-service |
         """
         return self.platform_client.get_deployment_entity(name, namespace)
 
@@ -459,7 +494,7 @@ class PlatformLibrary(object):
         """
         return self.platform_client.get_deployment_entities(namespace)
 
-    def get_deployment_entity_names_for_service(self, namespace: str, service: str, label: str = 'clusterName') -> list:
+    def get_deployment_entity_names_for_service(self, namespace: str, service: str, label: str = "clusterName") -> list:
         """Returns list of `deployments`.
         Supposed that all deployment entities are matched on the particular Kubernetes service. This matching is
         implemented by special `label` for deployment entity. The name of this `label` is specified by developer,
@@ -472,10 +507,9 @@ class PlatformLibrary(object):
         """
         return self.platform_client.get_deployment_entity_names_for_service(namespace, service, label)
 
-    def get_first_deployment_entity_name_for_service(self,
-                                                     namespace: str,
-                                                     service: str,
-                                                     label: str = 'clusterName') -> str:
+    def get_first_deployment_entity_name_for_service(
+        self, namespace: str, service: str, label: str = "clusterName"
+    ) -> str:
         """Returns first found `deployment`.
         Supposed that all deployment entities are matched on the particular Kubernetes service. This matching is
         implemented by special `label` for deployment entity. The name of this `label` is specified by developer,
@@ -488,10 +522,9 @@ class PlatformLibrary(object):
         """
         return self.platform_client.get_first_deployment_entity_name_for_service(namespace, service, label)
 
-    def get_inactive_deployment_entities_for_service(self,
-                                                     namespace: str,
-                                                     service: str,
-                                                     label: str = 'clusterName') -> list:
+    def get_inactive_deployment_entities_for_service(
+        self, namespace: str, service: str, label: str = "clusterName"
+    ) -> list:
         """Returns list of inactive `deployments`.
         Supposed that all deployment entities are matched on the particular Kubernetes service. This matching is
         implemented by special `label` for deployment entity. The name of this `label` is specified by developer,
@@ -505,10 +538,9 @@ class PlatformLibrary(object):
         """
         return self.platform_client.get_inactive_deployment_entities_for_service(namespace, service, label)
 
-    def get_inactive_deployment_entities_names_for_service(self,
-                                                           namespace: str,
-                                                           service: str,
-                                                           label: str = 'clusterName') -> list:
+    def get_inactive_deployment_entities_names_for_service(
+        self, namespace: str, service: str, label: str = "clusterName"
+    ) -> list:
         """Returns list with names of inactive `deployments`.
         Supposed that all deployment entities are matched on the particular Kubernetes service. This matching is
         implemented by special `label` for deployment entity. The name of this `label` is specified by developer,
@@ -522,10 +554,9 @@ class PlatformLibrary(object):
         """  # noqa: E501
         return self.platform_client.get_inactive_deployment_entities_names_for_service(namespace, service, label)
 
-    def get_inactive_deployment_entities_count_for_service(self,
-                                                           namespace: str,
-                                                           service: str,
-                                                           label: str = 'clusterName') -> int:
+    def get_inactive_deployment_entities_count_for_service(
+        self, namespace: str, service: str, label: str = "clusterName"
+    ) -> int:
         """Returns number of inactive `deployments`.
         Supposed that all deployment entities are matched on the particular Kubernetes service. This matching is
         implemented by special `label` for deployment entity. The name of this `label` is specified by developer,
@@ -548,16 +579,14 @@ class PlatformLibrary(object):
         """
         counter = 0
         for deployment_entity_name in deployment_entity_names:
-            deployment_entity = self.get_deployment_entity(
-                deployment_entity_name, namespace)
+            deployment_entity = self.get_deployment_entity(deployment_entity_name, namespace)
             if not deployment_entity.status.replicas:
                 counter += 1
         return counter
 
-    def get_active_deployment_entities_for_service(self,
-                                                   namespace: str,
-                                                   service: str,
-                                                   label: str = 'clusterName') -> list:
+    def get_active_deployment_entities_for_service(
+        self, namespace: str, service: str, label: str = "clusterName"
+    ) -> list:
         """Returns list of active `deployments`.
         Supposed that all deployment entities are matched on the particular Kubernetes service. This matching is
         implemented by special `label` for deployment entity. The name of this `label` is specified by developer,
@@ -571,10 +600,9 @@ class PlatformLibrary(object):
         """
         return self.platform_client.get_active_deployment_entities_for_service(namespace, service, label)
 
-    def get_active_deployment_entities_names_for_service(self,
-                                                         namespace: str,
-                                                         service: str,
-                                                         label: str = 'clusterName') -> list:
+    def get_active_deployment_entities_names_for_service(
+        self, namespace: str, service: str, label: str = "clusterName"
+    ) -> list:
         """Returns list with names of active `deployments`.
         Supposed that all deployment entities are matched on the particular Kubernetes service. This matching is
         implemented by special `label` for deployment entity. The name of this `label` is specified by developer,
@@ -588,10 +616,9 @@ class PlatformLibrary(object):
         """
         return self.platform_client.get_active_deployment_entities_names_for_service(namespace, service, label)
 
-    def get_active_deployment_entities_count_for_service(self,
-                                                         namespace: str,
-                                                         service: str,
-                                                         label: str = 'clusterName') -> int:
+    def get_active_deployment_entities_count_for_service(
+        self, namespace: str, service: str, label: str = "clusterName"
+    ) -> int:
         """Returns number of active `deployments`.
         Supposed that all deployment entities are matched on the particular Kubernetes service. This matching is
         implemented by special `label` for deployment entity. The name of this `label` is specified by developer,
@@ -614,10 +641,11 @@ class PlatformLibrary(object):
         """
         counter = 0
         for deployment_entity_name in deployment_entity_names:
-            deployment_entity = self.get_deployment_entity(
-                deployment_entity_name, namespace)
-            if not self.platform_client.get_deployment_entity_unavailable_replicas(deployment_entity) \
-                    and deployment_entity.status.replicas:
+            deployment_entity = self.get_deployment_entity(deployment_entity_name, namespace)
+            if (
+                not self.platform_client.get_deployment_entity_unavailable_replicas(deployment_entity)
+                and deployment_entity.status.replicas
+            ):
                 counter += 1
         return counter
 
@@ -647,8 +675,7 @@ class PlatformLibrary(object):
         """
         return self.platform_client.delete_deployment_entity(name=name, namespace=namespace)
 
-    def check_service_is_scaled(self, deployment_entity_names, namespace: str, direction="up",
-                                timeout=300) -> bool:
+    def check_service_is_scaled(self, deployment_entity_names, namespace: str, direction="up", timeout=300) -> bool:
         """Returns `True` if all given `deployments` are scaled. They can be scaled "up" or "down".
         `direction` variable defines direction of scale and should be set without quote symbols.
         "down" direction means  that all given deployment entities have no replicas.
@@ -672,11 +699,14 @@ class PlatformLibrary(object):
             raise Exception(f'direction argument should be "up" or "down" but {direction} is given')
 
         if isinstance(deployment_entity_names, str):
-            deployment_entity_names = list(deployment_entity_names.split(' '))
+            deployment_entity_names = list(deployment_entity_names.split(" "))
 
         timeout_start = time.time()
-        check_func = self.get_active_deployment_entities_count \
-            if direction == "up" else self.get_inactive_deployment_entities_count
+        check_func = (
+            self.get_active_deployment_entities_count
+            if direction == "up"
+            else self.get_inactive_deployment_entities_count
+        )
 
         while time.time() <= timeout_start + timeout:
             if len(deployment_entity_names) == check_func(deployment_entity_names, namespace):
@@ -685,11 +715,13 @@ class PlatformLibrary(object):
 
         return False
 
-    def scale_down_deployment_entities_by_service_name(self,
-                                                       service_name: str,
-                                                       namespace: str,
-                                                       with_check: bool = False,
-                                                       timeout: int = 300):
+    def scale_down_deployment_entities_by_service_name(
+        self,
+        service_name: str,
+        namespace: str,
+        with_check: bool = False,
+        timeout: int = 300,
+    ):
         """Scales down (set 0 replicas) all `deployments` which manage the same `Pods` as given `Service`.
         Deployment entities are found by Service name and namespace.
         `with_check` is used to wait till all Deployment entities will have no replicas.
@@ -700,21 +732,20 @@ class PlatformLibrary(object):
         | Scale Down Deployment Entities By Service Name | elasticsearch | elasticsearch-service | with_check=True |
         | Scale Down Deployment Entities By Service Name | elasticsearch | elasticsearch-service |
         """  # noqa: E501
-        deployment_entity_names = self.get_deployment_entity_names_by_service_name(
-            service_name, namespace)
+        deployment_entity_names = self.get_deployment_entity_names_by_service_name(service_name, namespace)
         for deployment_entity_name in deployment_entity_names:
-            self.set_replicas_for_deployment_entity(
-                deployment_entity_name, namespace, replicas=0)
+            self.set_replicas_for_deployment_entity(deployment_entity_name, namespace, replicas=0)
         if with_check:
-            self.check_service_is_scaled(
-                deployment_entity_names, namespace, direction="down", timeout=timeout)
+            self.check_service_is_scaled(deployment_entity_names, namespace, direction="down", timeout=timeout)
 
-    def scale_up_deployment_entities_by_service_name(self,
-                                                     service_name: str,
-                                                     namespace: str,
-                                                     with_check: bool = False,
-                                                     timeout: int = 300,
-                                                     **kwargs):
+    def scale_up_deployment_entities_by_service_name(
+        self,
+        service_name: str,
+        namespace: str,
+        with_check: bool = False,
+        timeout: int = 300,
+        **kwargs,
+    ):
         """Scales up `deployments` which manage the same `Pods` as given `Service`.
         If `replicas` parameter is presented method set it value to all found Deployment Entities as replicas value.
         If this parameter is not presented for all found Deployment Entities number of replicas will be increase on one.
@@ -730,24 +761,20 @@ class PlatformLibrary(object):
         | Scale Up Deployment Entities By Service Name | elasticsearch | elasticsearch-service | with_check=True |
         | Scale Up Deployment Entities By Service Name | elasticsearch | elasticsearch-service |
         """  # noqa: E501
-        replicas = kwargs.get('replicas', None)
+        replicas = kwargs.get("replicas", None)
         if replicas is not None:
             replicas = int(replicas)
-        deployment_entity_names = self.get_deployment_entity_names_by_service_name(
-            service_name, namespace)
+        deployment_entity_names = self.get_deployment_entity_names_by_service_name(service_name, namespace)
         for deployment_entity_name in deployment_entity_names:
             if replicas is not None:
-                self.set_replicas_for_deployment_entity(
-                    deployment_entity_name, namespace, replicas=replicas)
+                self.set_replicas_for_deployment_entity(deployment_entity_name, namespace, replicas=replicas)
             else:
-                self.scale_up_deployment_entity(
-                    deployment_entity_name, namespace)
+                self.scale_up_deployment_entity(deployment_entity_name, namespace)
         if with_check:
             direction = "down" if replicas == 0 else "up"
-            self.check_service_is_scaled(
-                deployment_entity_names, namespace, direction=direction, timeout=timeout)
+            self.check_service_is_scaled(deployment_entity_names, namespace, direction=direction, timeout=timeout)
 
-    def get_deployment_entities_count_for_service(self, namespace: str, service: str, label: str = 'clusterName'):
+    def get_deployment_entities_count_for_service(self, namespace: str, service: str, label: str = "clusterName"):
         """Returns number of `deployments`.
         Supposed that all deployment entities are matched on the particular Kubernetes service. This matching is
         implemented by special `label` for deployment entity. The name of this `label` is specified by developer,
@@ -770,8 +797,7 @@ class PlatformLibrary(object):
         | Set Replicas For Deployment Entity | cassandra-backup-daemon | cassandra        | replicas=3 |
         | Set Replicas For Deployment Entity | monitoring-collector    | postgres-service |
         """
-        self.platform_client.set_replicas_for_deployment_entity(
-            name, namespace, replicas)
+        self.platform_client.set_replicas_for_deployment_entity(name, namespace, replicas)
 
     def scale_up_deployment_entity(self, name: str, namespace: str):
         """Increases by one number of replicas for found `deployment`.
@@ -816,8 +842,11 @@ class PlatformLibrary(object):
         | Get Deployment Entity Names By Selector | elasticsearch-service | <dictionary_with_labels> |
         """
         deployment_entities = self.get_deployment_entities(namespace)
-        return [deployment_entity.metadata.name for deployment_entity in deployment_entities
-                if self._do_labels_satisfy_selector(deployment_entity.spec.template.metadata.labels, selector)]
+        return [
+            deployment_entity.metadata.name
+            for deployment_entity in deployment_entities
+            if self._do_labels_satisfy_selector(deployment_entity.spec.template.metadata.labels, selector)
+        ]
 
     def get_deployment_entity_names_by_service_name(self, service_name: str, namespace: str) -> list:
         """Returns list of `deployment` names by given Kubernetes service name and `namespace`.
@@ -839,13 +868,13 @@ class PlatformLibrary(object):
         Example:
         | Get Pod Names For Deployment Entity | elasticsearch-1 | elasticsearch-cluster |
         """
-        matched_labels = self.get_deployment_entity_pod_selector_labels(
-            deployment_entity_name, namespace)
+        matched_labels = self.get_deployment_entity_pod_selector_labels(deployment_entity_name, namespace)
         pods = self.get_pods(namespace)
         if not pods or not matched_labels:
             return []
-        return [pod.metadata.name for pod in pods
-                if self._do_labels_satisfy_selector(pod.metadata.labels, matched_labels)]
+        return [
+            pod.metadata.name for pod in pods if self._do_labels_satisfy_selector(pod.metadata.labels, matched_labels)
+        ]
 
     @staticmethod
     def _do_labels_satisfy_selector(labels: dict, selector: dict):
@@ -876,14 +905,11 @@ class PlatformLibrary(object):
         Example:
         | Patch Namespaced Deployment Entity | elasticsearch-1 | elasticsearch-cluster | <part_of_deployment_entity_spec> |
         """  # noqa: E501
-        self.platform_client.patch_namespaced_deployment_entity(
-            name, namespace, body)
+        self.platform_client.patch_namespaced_deployment_entity(name, namespace, body)
 
-    def get_environment_variables_for_deployment_entity_container(self,
-                                                                  name: str,
-                                                                  namespace: str,
-                                                                  container_name: str,
-                                                                  variable_names: list) -> dict:
+    def get_environment_variables_for_deployment_entity_container(
+        self, name: str, namespace: str, container_name: str, variable_names: list
+    ) -> dict:
         """Returns a dictionary of `deployment` environment variables (key-values) for container.
         Deployment entity is found by name and namespace.
         `container_name` specifies name of docker container associated with environment variables (parameter is
@@ -899,11 +925,9 @@ class PlatformLibrary(object):
         entity = self.get_deployment_entity(name, namespace)
         return self._get_environment_variables_for_container(entity, container_name, variable_names)
 
-    def set_environment_variables_for_deployment_entity_container(self,
-                                                                  name: str,
-                                                                  namespace: str,
-                                                                  container_name: str,
-                                                                  variables_to_change: dict):
+    def set_environment_variables_for_deployment_entity_container(
+        self, name: str, namespace: str, container_name: str, variables_to_change: dict
+    ):
         """Changes values for given environment variables per `deployment` container.
         Deployment entity is found by name and namespace.
         `container_name` specifies name of docker container associated with environment variables (parameter is
@@ -918,24 +942,17 @@ class PlatformLibrary(object):
         | Set Environment Variables For Deployment Entity Container | elasticsearch-1 | elasticsearch-cluster | elasticsearch | <dictionary_of_variables_to_change> |
         """  # noqa: E501
         entity = self.get_deployment_entity(name, namespace)
-        self._prepare_entity_with_environment_variables_for_container(
-            entity, container_name, variables_to_change)
+        self._prepare_entity_with_environment_variables_for_container(entity, container_name, variables_to_change)
         self.patch_namespaced_deployment_entity(name, namespace, entity)
 
-    def _get_environment_variables_for_container(self,
-                                                 entity,
-                                                 container_name: str,
-                                                 variable_names: list) -> dict:
-        environments = self._get_environments_for_container(
-            entity.spec.template.spec.containers, container_name)
+    def _get_environment_variables_for_container(self, entity, container_name: str, variable_names: list) -> dict:
+        environments = self._get_environments_for_container(entity.spec.template.spec.containers, container_name)
         return self._get_env_variables(environments, variable_names)
 
-    def _prepare_entity_with_environment_variables_for_container(self,
-                                                                 entity,
-                                                                 container_name: str,
-                                                                 variables_to_update: dict):
-        environments = self._get_environments_for_container(
-            entity.spec.template.spec.containers, container_name)
+    def _prepare_entity_with_environment_variables_for_container(
+        self, entity, container_name: str, variables_to_update: dict
+    ):
+        environments = self._get_environments_for_container(entity.spec.template.spec.containers, container_name)
 
         def set_new_variables(dicts: list, params: dict):
             for dictionary in dicts:
@@ -984,7 +1001,7 @@ class PlatformLibrary(object):
         """
         return self.k8s_apps_v1_client.list_namespaced_stateful_set(namespace).items
 
-    def get_stateful_set_names_by_label(self, namespace: str, label_value: str, label_name: str = 'service') -> list:
+    def get_stateful_set_names_by_label(self, namespace: str, label_value: str, label_name: str = "service") -> list:
         """Returns list of `Stateful Set` names by namespace and the particular label.
         `Label` is a "key-value" pair where key is `label_name` variable and value is `label_value`. If a Stateful Set
         contains this `label` its name is added to the result list.
@@ -994,8 +1011,11 @@ class PlatformLibrary(object):
         | Get Stateful Set Names By Label | cassandra | cassandra-cluster |
         """
         stateful_sets = self.get_stateful_sets(namespace)
-        return [stateful_set.metadata.name for stateful_set in stateful_sets
-                if stateful_set.metadata.labels.get(label_name, "") == label_value]
+        return [
+            stateful_set.metadata.name
+            for stateful_set in stateful_sets
+            if stateful_set.metadata.labels.get(label_name, "") == label_value
+        ]
 
     @deprecated(reason="Use get_stateful_set_replicas_count")
     def get_stateful_set_replica_counts(self, name: str, namespace: str) -> int:
@@ -1020,8 +1040,7 @@ class PlatformLibrary(object):
         Example:
         | Get Stateful Set Replicas Count | cassandra1 | cassandra |
         """
-        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(
-            name, namespace)
+        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(name, namespace)
         return stateful_set.spec.replicas
 
     def get_stateful_set_ready_replicas_count(self, name: str, namespace: str) -> int:
@@ -1034,8 +1053,7 @@ class PlatformLibrary(object):
         Example:
         | Get Stateful Set Ready Replicas Count | cassandra1 | cassandra |
         """
-        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(
-            name, namespace)
+        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(name, namespace)
         return stateful_set.status.ready_replicas
 
     @deprecated(reason="Use get_active_stateful_sets_count")
@@ -1095,8 +1113,9 @@ class PlatformLibrary(object):
         return counter
 
     # TODO: refactor this method with the same one for deployment entities
-    def check_service_of_stateful_sets_is_scaled(self, stateful_set_names, namespace: str, direction="up",
-                                                 timeout=300) -> bool:
+    def check_service_of_stateful_sets_is_scaled(
+        self, stateful_set_names, namespace: str, direction="up", timeout=300
+    ) -> bool:
         """Returns `True` if all given Stateful Sets are scaled. They can be scaled "up" or "down".
         `direction` variable defines direction of scale and should be set without quote symbols. "down" direction means
         that all given Stateful Sets have no replicas. "up" direction means that all given Stateful Sets have only
@@ -1118,11 +1137,10 @@ class PlatformLibrary(object):
             raise Exception(f'direction argument should be "up" or "down" but {direction} is given')
 
         if isinstance(stateful_set_names, str):
-            stateful_set_names = list(stateful_set_names.split(' '))
+            stateful_set_names = list(stateful_set_names.split(" "))
 
         timeout_start = time.time()
-        check_func = self.get_active_stateful_sets_count \
-            if direction == "up" else self.get_inactive_stateful_set_count
+        check_func = self.get_active_stateful_sets_count if direction == "up" else self.get_inactive_stateful_set_count
         while True:
             if len(stateful_set_names) == check_func(stateful_set_names, namespace):
                 return True
@@ -1130,11 +1148,13 @@ class PlatformLibrary(object):
                 return False
             time.sleep(5)
 
-    def scale_down_stateful_sets_by_service_name(self,
-                                                 service_name: str,
-                                                 namespace: str,
-                                                 with_check: bool = False,
-                                                 timeout: int = 300):
+    def scale_down_stateful_sets_by_service_name(
+        self,
+        service_name: str,
+        namespace: str,
+        with_check: bool = False,
+        timeout: int = 300,
+    ):
         """Scales down (set 0 replicas) all `Stateful Sets` which manage the same `Pods` as given `Service`.
         Stateful Sets are found by Service name and namespace.
         `with_check` is used to wait till all Stateful Sets will have no replicas.
@@ -1145,22 +1165,23 @@ class PlatformLibrary(object):
         | Scale Down Stateful Sets By Service Name | cassandra | cassandra | with_check=True |
         | Scale Down Stateful Sets By Service Name | cassandra | cassandra |
         """
-        stateful_set_names = self.get_stateful_set_names_by_service_name(
-            service_name, namespace)
+        stateful_set_names = self.get_stateful_set_names_by_service_name(service_name, namespace)
         for stateful_set_name in stateful_set_names:
-            self.set_replicas_for_stateful_set(
-                stateful_set_name, namespace, replicas=0)
+            self.set_replicas_for_stateful_set(stateful_set_name, namespace, replicas=0)
         if with_check:
-            self.check_service_of_stateful_sets_is_scaled(stateful_set_names, namespace, direction="down",
-                                                          timeout=timeout)
+            self.check_service_of_stateful_sets_is_scaled(
+                stateful_set_names, namespace, direction="down", timeout=timeout
+            )
 
     # TODO: Add an ability to do it with ordering
-    def scale_up_stateful_sets_by_service_name(self,
-                                               service_name: str,
-                                               namespace: str,
-                                               with_check: bool = False,
-                                               timeout: int = 300,
-                                               **kwargs):
+    def scale_up_stateful_sets_by_service_name(
+        self,
+        service_name: str,
+        namespace: str,
+        with_check: bool = False,
+        timeout: int = 300,
+        **kwargs,
+    ):
         """Scales up `Stateful Sets` which manage the same `Pods` as given `Service`.
         If `replicas` parameter is presented method set it value to all found Stateful Sets as replicas value. If this
         parameter is not presented for all found Stateful Sets number of replicas will be increase on one. Actually,
@@ -1176,21 +1197,20 @@ class PlatformLibrary(object):
         | Scale Up Stateful Sets By Service Name | cassandra | cassandra | with_check=True |
         | Scale Up Stateful Sets By Service Name | cassandra | cassandra |
         """  # noqa: E501
-        replicas = kwargs.get('replicas', None)
+        replicas = kwargs.get("replicas", None)
         if replicas is not None:
             replicas = int(replicas)
-        stateful_set_names = self.get_stateful_set_names_by_service_name(
-            service_name, namespace)
+        stateful_set_names = self.get_stateful_set_names_by_service_name(service_name, namespace)
         for stateful_set_name in stateful_set_names:
             if replicas is not None:
-                self.set_replicas_for_stateful_set(
-                    stateful_set_name, namespace, replicas=replicas)
+                self.set_replicas_for_stateful_set(stateful_set_name, namespace, replicas=replicas)
             else:
                 self.scale_up_stateful_set(stateful_set_name, namespace)
         if with_check:
             direction = "down" if replicas is not None and replicas == 0 else "up"
-            self.check_service_of_stateful_sets_is_scaled(stateful_set_names, namespace, direction=direction,
-                                                          timeout=timeout)
+            self.check_service_of_stateful_sets_is_scaled(
+                stateful_set_names, namespace, direction=direction, timeout=timeout
+            )
 
     def get_stateful_set_pod_selector(self, name: str, namespace: str) -> dict:
         """Returns a Stateful Set labels selector as dictionary.
@@ -1202,8 +1222,7 @@ class PlatformLibrary(object):
         Example:
         | Get Stateful Set Pod Selector | cassandra0 | cassandra |
         """
-        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(
-            name, namespace)
+        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(name, namespace)
         return stateful_set.spec.selector.match_labels
 
     def get_stateful_set_names_by_selector(self, namespace: str, selector: dict) -> list:
@@ -1216,8 +1235,11 @@ class PlatformLibrary(object):
         | Get Stateful Set Names By Selector | cassandra | <selector_dictionary> |
         """
         stateful_sets = self.get_stateful_sets(namespace)
-        return [stateful_set.metadata.name for stateful_set in stateful_sets
-                if self._do_labels_satisfy_selector(stateful_set.spec.template.metadata.labels, selector)]
+        return [
+            stateful_set.metadata.name
+            for stateful_set in stateful_sets
+            if self._do_labels_satisfy_selector(stateful_set.spec.template.metadata.labels, selector)
+        ]
 
     def get_stateful_set_names_by_service_name(self, service_name: str, namespace: str) -> list:
         """Returns list of `Stateful Set` names by given Kubernetes service name and `namespace`.
@@ -1244,11 +1266,9 @@ class PlatformLibrary(object):
         | Set Replicas For Stateful Set | cassandra-dc-dc1 | cassandra | replicas=2 |
         | Set Replicas For Stateful Set | cassandra-dc-dc1 | cassandra |
         """
-        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(
-            name, namespace)
+        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(name, namespace)
         scale.spec.replicas = replicas
-        self.k8s_apps_v1_client.patch_namespaced_stateful_set(
-            name, namespace, scale)
+        self.k8s_apps_v1_client.patch_namespaced_stateful_set(name, namespace, scale)
 
     def scale_up_stateful_set(self, name: str, namespace: str):
         """Increases by one number of replicas for found `Stateful Set`.
@@ -1261,14 +1281,12 @@ class PlatformLibrary(object):
         Example:
         | Scale Up Stateful Set | cassandra0 | cassandra |
         """
-        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(
-            name, namespace)
+        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(name, namespace)
         if scale.spec.replicas is None:
             scale.spec.replicas = 1
         else:
             scale.spec.replicas += 1
-        self.k8s_apps_v1_client.patch_namespaced_stateful_set(
-            name, namespace, scale)
+        self.k8s_apps_v1_client.patch_namespaced_stateful_set(name, namespace, scale)
 
     def scale_down_stateful_set(self, name: str, namespace: str):
         """Decreases by one number of replicas for found `Stateful Set`.
@@ -1281,14 +1299,12 @@ class PlatformLibrary(object):
         Example:
         | Scale Down Stateful Set | cassandra0 | cassandra |
         """
-        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(
-            name, namespace)
+        scale = self.k8s_apps_v1_client.read_namespaced_stateful_set_scale(name, namespace)
         if not scale.spec.replicas:
             scale.spec.replicas = 0
         else:
             scale.spec.replicas -= 1
-        self.k8s_apps_v1_client.patch_namespaced_stateful_set(
-            name, namespace, scale)
+        self.k8s_apps_v1_client.patch_namespaced_stateful_set(name, namespace, scale)
 
     def get_pod_names_for_stateful_set(self, name: str, namespace: str) -> list:
         """Returns expected pod names for a `Stateful Set`.
@@ -1301,15 +1317,12 @@ class PlatformLibrary(object):
         Example:
         | Get Pod Names For Stateful Set | cassandra0 | cassandra |
         """
-        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(
-            name, namespace)
-        return [f'{name}-{number}' for number in range(stateful_set.status.replicas)]
+        stateful_set = self.k8s_apps_v1_client.read_namespaced_stateful_set(name, namespace)
+        return [f"{name}-{number}" for number in range(stateful_set.status.replicas)]
 
-    def get_environment_variables_for_stateful_set_container(self,
-                                                             name: str,
-                                                             namespace: str,
-                                                             container_name: str,
-                                                             variable_names: list) -> dict:
+    def get_environment_variables_for_stateful_set_container(
+        self, name: str, namespace: str, container_name: str, variable_names: list
+    ) -> dict:
         """Returns a dictionary of `Stateful Set` environment variables (key-values) for container.
         Stateful Set is found by name and namespace.
         `container_name` specifies name of docker container associated with environment variables (parameter is
@@ -1325,11 +1338,9 @@ class PlatformLibrary(object):
         entity = self.get_stateful_set(name, namespace)
         return self._get_environment_variables_for_container(entity, container_name, variable_names)
 
-    def set_environment_variables_for_stateful_set_container(self,
-                                                             name: str,
-                                                             namespace: str,
-                                                             container_name: str,
-                                                             variables_to_change: dict):
+    def set_environment_variables_for_stateful_set_container(
+        self, name: str, namespace: str, container_name: str, variables_to_change: dict
+    ):
         """Changes values for given environment variables per `Stateful Set` container.
         Stateful Set is found by name and namespace.
         `container_name` specifies name of docker container associated with environment variables (parameter is
@@ -1344,10 +1355,8 @@ class PlatformLibrary(object):
         | Set Environment_Variables For Stateful Set Container | cassandra0 | cassandra | cassandra | <dictionary_of_environment_variables_to_change> |
         """  # noqa: E501
         entity = self.get_stateful_set(name, namespace)
-        self._prepare_entity_with_environment_variables_for_container(
-            entity, container_name, variables_to_change)
-        self.k8s_apps_v1_client.patch_namespaced_stateful_set(
-            name, namespace, entity)
+        self._prepare_entity_with_environment_variables_for_container(entity, container_name, variables_to_change)
+        self.k8s_apps_v1_client.patch_namespaced_stateful_set(name, namespace, entity)
 
     def get_pod(self, name: str, namespace: str):
         """Returns the particular pod configuration as JSON object.
@@ -1377,11 +1386,12 @@ class PlatformLibrary(object):
         Example:
         | Get Pods By Selector | elasticsearch-service | <selector_dictionary> |
         """
-        return [pod for pod in self.get_pods(namespace)
-                if self._do_labels_satisfy_selector(pod.metadata.labels, selector)]
+        return [
+            pod for pod in self.get_pods(namespace) if self._do_labels_satisfy_selector(pod.metadata.labels, selector)
+        ]
 
     def get_pods_by_service_name(self, service_name: str, namespace: str) -> list:
-        """ Returns list of `Pods` from given namespace for Service's relative `pods`.
+        """Returns list of `Pods` from given namespace for Service's relative `pods`.
         Method looks up `Service` by name and namespace takes its label selector and finds all matched
         Kubernetes `Pods`.
 
@@ -1401,8 +1411,11 @@ class PlatformLibrary(object):
         Example:
         | Get Pod Names By Selector | elasticsearch-service | <selector_dictionary> |
         """
-        return [pod.metadata.name for pod in self.get_pods(namespace)
-                if self._do_labels_satisfy_selector(pod.metadata.labels, selector)]
+        return [
+            pod.metadata.name
+            for pod in self.get_pods(namespace)
+            if self._do_labels_satisfy_selector(pod.metadata.labels, selector)
+        ]
 
     def get_pod_names_by_service_name(self, service_name: str, namespace: str) -> list:
         """Returns list of `Pod` names from given namespace for Service's relative `pods`.
@@ -1435,7 +1448,7 @@ class PlatformLibrary(object):
                 counter += 1
         return counter
 
-    def get_deployment_replicas_count(self, service: str, namespace: str, label: str = 'clusterName') -> int:
+    def get_deployment_replicas_count(self, service: str, namespace: str, label: str = "clusterName") -> int:
         """Returns Number of Replicas from given namespace for Service's relative `deployment`.
         Method looks up `Deployment` by service name and namespace, takes its label selector and finds all matching
         Kubernetes `Deployments`.
@@ -1445,18 +1458,15 @@ class PlatformLibrary(object):
         Example:
         | Get Deployment Replicas | streaming-platform | streaming-service |
         """
-        deployment_list = self.platform_client.get_active_deployment_entities_for_service(
-            namespace, service, label)
+        deployment_list = self.platform_client.get_active_deployment_entities_for_service(namespace, service, label)
         replicas_count = 0
         for deployment in deployment_list:
             replicas_count += deployment.spec.replicas
         return replicas_count
 
-    def get_pod_container_environment_variables_for_service(self,
-                                                            namespace: str,
-                                                            service: str,
-                                                            container_name: str,
-                                                            variable_names: list) -> dict:
+    def get_pod_container_environment_variables_for_service(
+        self, namespace: str, service: str, container_name: str, variable_names: list
+    ) -> dict:
         """Returns a dictionary of `Pod` names and container environment variables (key-values) from given
         namespace for Service's relative `pods`. Method looks up `Service` by name and namespace takes
         its label selector and finds all matched Kubernetes `Pods`.
@@ -1471,15 +1481,13 @@ class PlatformLibrary(object):
         pods = self.get_pods_by_service_name(service, namespace)
         result = {}
         for pod in pods:
-            environments = self._get_environments_for_container(
-                pod.spec.containers, container_name)
-            env_variables = self._get_env_variables(
-                environments, variable_names)
-            result[pod.metadata.labels.get('name', '')] = env_variables
+            environments = self._get_environments_for_container(pod.spec.containers, container_name)
+            env_variables = self._get_env_variables(environments, variable_names)
+            result[pod.metadata.labels.get("name", "")] = env_variables
         return result
 
     def look_up_pod_name_by_pod_ip(self, pod_ip: str, namespace: str):
-        """ Returns name of `Pod` from given namespace by ip of `pod`.
+        """Returns name of `Pod` from given namespace by ip of `pod`.
 
         Example:
         | Look Up Pod Name By Pod Ip | 10.129.2.61 | elasticsearch-service |
@@ -1491,7 +1499,7 @@ class PlatformLibrary(object):
         return None
 
     def look_up_pod_ip_by_pod_name(self, pod_name: str, namespace: str):
-        """ Returns IP of `Pod` from given project/namespace by name of `pod`.
+        """Returns IP of `Pod` from given project/namespace by name of `pod`.
 
         Example:
         | Look Up Pod Ip By Pod Name | kafka-1-5d569cc485-zwnpv | kafka-service |
@@ -1503,16 +1511,15 @@ class PlatformLibrary(object):
         return None
 
     def delete_pod_by_pod_name(self, name: str, namespace: str, grace_period=0):
-        """ Deletes `Pod` from given namespace by name of `pod`.
+        """Deletes `Pod` from given namespace by name of `pod`.
 
         Example:
         | Delete Pod By Pod Name | streaming-platform-1-kj8sf | streaming-platform-service |
         """
-        self.k8s_core_v1_client.delete_namespaced_pod(
-            namespace=namespace, name=name, grace_period_seconds=grace_period)
+        self.k8s_core_v1_client.delete_namespaced_pod(namespace=namespace, name=name, grace_period_seconds=grace_period)
 
     def delete_pod_by_pod_ip(self, pod_ip: str, namespace: str):
-        """ Deletes `Pod` from given namespace by ip of `pod`.
+        """Deletes `Pod` from given namespace by ip of `pod`.
 
         Example:
         | Delete Pod By Pod Ip | 10.129.2.61 | streaming-platform-service |
@@ -1521,8 +1528,14 @@ class PlatformLibrary(object):
         if pod_name:
             self.delete_pod_by_pod_name(pod_name, namespace)
 
-    def execute_command_in_pod(self, name: str, namespace: str, command: str,
-                               container: str = "", shell: str = "/bin/bash"):
+    def execute_command_in_pod(
+        self,
+        name: str,
+        namespace: str,
+        command: str,
+        container: str = "",
+        shell: str = "/bin/bash",
+    ):
         """Executes given console command within docker container.
         `container` variable specifies name of container. It can be empty if pod contains only one container.
         The Pod is found by name and namespace. Method executes given console command within the stream and
@@ -1533,17 +1546,19 @@ class PlatformLibrary(object):
         | Execute Command In Pod | consul-server-1                  | consul        | ls -la | container=consul |
         | Execute Command In Pod | consul-server-1                  | consul        | ls -la | container=consul | shell=/bin/sh |
         """  # noqa: E501
-        exec_cmd = [shell, '-c', command]
-        response = stream(self.k8s_core_v1_client.connect_get_namespaced_pod_exec,
-                          name,
-                          namespace,
-                          container=container,
-                          command=exec_cmd,
-                          stderr=True,
-                          stdin=False,
-                          stdout=True,
-                          tty=False,
-                          _preload_content=False)
+        exec_cmd = [shell, "-c", command]
+        response = stream(
+            self.k8s_core_v1_client.connect_get_namespaced_pod_exec,
+            name,
+            namespace,
+            container=container,
+            command=exec_cmd,
+            stderr=True,
+            stdin=False,
+            stdout=True,
+            tty=False,
+            _preload_content=False,
+        )
 
         result = ""
         errors = ""
@@ -1675,34 +1690,45 @@ class PlatformLibrary(object):
             return resource.spec.template.spec.containers[0].image
         return None
 
-    def get_resource_image(self, resource_type: str, resource_name: str, namespace: str, resource_container_name=None):
+    def get_resource_image(
+        self,
+        resource_type: str,
+        resource_name: str,
+        namespace: str,
+        resource_container_name=None,
+    ):
         """
         Identifies the resource type and return image for the specified resource by the name
         of the resource and container in the specified namespace.
         """
-        if resource_type == 'daemonset':
+        if resource_type == "daemonset":
             daemon_set = self.get_daemon_set(resource_name, namespace)
             return self.get_image(daemon_set, resource_container_name)
-        elif resource_type == 'deployment':
+        elif resource_type == "deployment":
             deployment = self.get_deployment_entity(resource_name, namespace)
             return self.get_image(deployment, resource_container_name)
-        elif resource_type == 'statefulset':
+        elif resource_type == "statefulset":
             stateful_set = self.get_stateful_set(resource_name, namespace)
             return self.get_image(stateful_set, resource_container_name)
         else:
-            raise Exception(
-                f'The type [{resource_type}] is not supported yet.')
+            raise Exception(f"The type [{resource_type}] is not supported yet.")
 
     def get_dd_images_from_config_map(self, config_map_name, namespace):
         config_map = self.get_config_map(config_map_name, namespace)
-        config_map_yaml = (config_map.to_dict())
+        config_map_yaml = config_map.to_dict()
         cm = config_map_yaml["data"]["dd_images"]
         if cm:
             return cm
         else:
             return None
 
-    def get_pod_logs(self, pod_name: str, namespace: str, container_name: str = None, tail_lines: int = 100) -> str:
+    def get_pod_logs(
+        self,
+        pod_name: str,
+        namespace: str,
+        container_name: str = None,
+        tail_lines: int = 100,
+    ) -> str:
         """
         Returns logs from a given pod in the specified namespace and container.
         """
@@ -1711,7 +1737,7 @@ class PlatformLibrary(object):
             name=pod_name,
             namespace=namespace,
             container=container_name,
-            tail_lines=tail_lines
+            tail_lines=tail_lines,
         )
 
     # ------------------------------------------------------------------
@@ -1766,19 +1792,19 @@ class PlatformLibrary(object):
         if isinstance(part_of, str):
             # Guard against Robot Framework passing the string 'None' when a variable
             # was not assigned (Run Keyword If with no ELSE branch).
-            if part_of.strip().lower() == 'none' or not part_of.strip():
+            if part_of.strip().lower() == "none" or not part_of.strip():
                 part_of = None
             else:
                 part_of = [part_of]
         if isinstance(part_of, list):
-            part_of = [p for p in part_of if p and str(p).strip().lower() != 'none']
+            part_of = [p for p in part_of if p and str(p).strip().lower() != "none"]
             if not part_of:
                 part_of = None
         filter_by_part_of = bool(part_of)
         if exclusions is None:
             exclusions = {}
         if namespace is None:
-            namespace = os.getenv('KUBE_NAMESPACE')
+            namespace = os.getenv("KUBE_NAMESPACE")
 
         robot_logger.info(
             f"[CH] Starting container hardening check | "
@@ -1790,14 +1816,11 @@ class PlatformLibrary(object):
         pods = self.get_pods(namespace)
         if filter_by_part_of:
             target_pods = [
-                pod for pod in pods
-                if pod.metadata.labels
-                and pod.metadata.labels.get('app.kubernetes.io/part-of') in part_of
+                pod
+                for pod in pods
+                if pod.metadata.labels and pod.metadata.labels.get("app.kubernetes.io/part-of") in part_of
             ]
-            robot_logger.info(
-                f"[CH] Found {len(target_pods)} pod(s) matching "
-                f"app.kubernetes.io/part-of in {part_of}"
-            )
+            robot_logger.info(f"[CH] Found {len(target_pods)} pod(s) matching app.kubernetes.io/part-of in {part_of}")
             if not target_pods:
                 robot_logger.warn(
                     f"[CH] No pods found with app.kubernetes.io/part-of in {part_of} "
@@ -1805,11 +1828,9 @@ class PlatformLibrary(object):
                 )
         else:
             target_pods = list(pods)
-            robot_logger.info(
-                f"[CH] Checking all {len(target_pods)} pod(s) in namespace '{namespace}'"
-            )
+            robot_logger.info(f"[CH] Checking all {len(target_pods)} pod(s) in namespace '{namespace}'")
 
-        global_excluded = {r.strip() for r in exclusions.get('_all', '').split(',') if r.strip()}
+        global_excluded = {r.strip() for r in exclusions.get("_all", "").split(",") if r.strip()}
         if global_excluded:
             robot_logger.info(f"[CH] Global exclusions (applied to all pods): {global_excluded}")
 
@@ -1817,9 +1838,9 @@ class PlatformLibrary(object):
 
         for pod in target_pods:
             pod_name = pod.metadata.name
-            app_name = (pod.metadata.labels or {}).get('app.kubernetes.io/name', '')
-            raw_excluded = exclusions.get(app_name, '')
-            excluded_rules = global_excluded | {r.strip() for r in raw_excluded.split(',') if r.strip()}
+            app_name = (pod.metadata.labels or {}).get("app.kubernetes.io/name", "")
+            raw_excluded = exclusions.get(app_name, "")
+            excluded_rules = global_excluded | {r.strip() for r in raw_excluded.split(",") if r.strip()}
 
             robot_logger.info(
                 f"[CH] Checking pod='{pod_name}' "
@@ -1834,22 +1855,15 @@ class PlatformLibrary(object):
                     robot_logger.warn(f"[CH] VIOLATION pod='{pod_name}': {v}")
                     all_violations.append(f"pod='{pod_name}': {v}")
             else:
-                robot_logger.info(
-                    f"[CH] pod='{pod_name}': all applicable rules PASSED"
-                )
+                robot_logger.info(f"[CH] pod='{pod_name}': all applicable rules PASSED")
 
         if all_violations:
-            summary = (
-                f"Container hardening check FAILED: "
-                f"{len(all_violations)} violation(s) found\n"
-                + "\n".join(f"  - {v}" for v in all_violations)
+            summary = f"Container hardening check FAILED: {len(all_violations)} violation(s) found\n" + "\n".join(
+                f"  - {v}" for v in all_violations
             )
             raise AssertionError(summary)
 
-        robot_logger.info(
-            f"[CH] Container hardening check PASSED for all "
-            f"{len(target_pods)} pod(s)"
-        )
+        robot_logger.info(f"[CH] Container hardening check PASSED for all {len(target_pods)} pod(s)")
 
     def _check_pod_hardening_rules(self, pod, excluded_rules: set) -> List[str]:
         """Return a list of human-readable violation strings for the given pod."""
@@ -1860,7 +1874,7 @@ class PlatformLibrary(object):
         # --- Pod-level checks ------------------------------------------------
 
         # CH3: Host namespaces forbidden
-        if 'CH3' not in excluded_rules:
+        if "CH3" not in excluded_rules:
             if spec.host_pid:
                 violations.append("[CH3] spec.hostPID=true — host namespaces are forbidden")
             if spec.host_ipc:
@@ -1869,16 +1883,13 @@ class PlatformLibrary(object):
                 violations.append("[CH3] spec.hostNetwork=true — host namespaces are forbidden")
 
         # CH10: Direct access to worker node network forbidden
-        if 'CH10' not in excluded_rules:
+        if "CH10" not in excluded_rules:
             if spec.host_network:
-                violations.append(
-                    "[CH10] spec.hostNetwork=true — "
-                    "direct access to worker node network is forbidden"
-                )
+                violations.append("[CH10] spec.hostNetwork=true — direct access to worker node network is forbidden")
 
         # CH11: hostPath volumes forbidden
-        if 'CH11' not in excluded_rules:
-            for vol in (spec.volumes or []):
+        if "CH11" not in excluded_rules:
+            for vol in spec.volumes or []:
                 if vol.host_path:
                     violations.append(
                         f"[CH11] volume '{vol.name}' uses hostPath "
@@ -1895,19 +1906,15 @@ class PlatformLibrary(object):
             csc = container.security_context  # V1SecurityContext or None
 
             robot_logger.debug(
-                f"[CH]   container='{cname}' "
-                f"image='{container.image}' "
-                f"has_security_context={csc is not None}"
+                f"[CH]   container='{cname}' image='{container.image}' has_security_context={csc is not None}"
             )
 
             # CH1: Run as non-root
-            if 'CH1' not in excluded_rules:
+            if "CH1" not in excluded_rules:
                 pod_run_as_non_root = pod_sc.run_as_non_root if pod_sc else None
                 csc_run_as_non_root = csc.run_as_non_root if csc else None
                 effective_run_as_non_root = (
-                    csc_run_as_non_root
-                    if csc_run_as_non_root is not None
-                    else pod_run_as_non_root
+                    csc_run_as_non_root if csc_run_as_non_root is not None else pod_run_as_non_root
                 )
                 if not effective_run_as_non_root:
                     violations.append(
@@ -1917,23 +1924,14 @@ class PlatformLibrary(object):
 
                 pod_run_as_user = pod_sc.run_as_user if pod_sc else None
                 csc_run_as_user = csc.run_as_user if csc else None
-                effective_run_as_user = (
-                    csc_run_as_user
-                    if csc_run_as_user is not None
-                    else pod_run_as_user
-                )
+                effective_run_as_user = csc_run_as_user if csc_run_as_user is not None else pod_run_as_user
                 if effective_run_as_user == 0:
-                    violations.append(
-                        f"[CH1] container '{cname}': runAsUser=0 (root user is forbidden)"
-                    )
+                    violations.append(f"[CH1] container '{cname}': runAsUser=0 (root user is forbidden)")
 
             # CH2: Privileged mode forbidden
-            if 'CH2' not in excluded_rules:
+            if "CH2" not in excluded_rules:
                 if csc and csc.privileged is True:
-                    violations.append(
-                        f"[CH2] container '{cname}': privileged=true — "
-                        "privileged mode is forbidden"
-                    )
+                    violations.append(f"[CH2] container '{cname}': privileged=true — privileged mode is forbidden")
                 csc_ape = csc.allow_privilege_escalation if csc else None
                 if csc_ape is not False:
                     violations.append(
@@ -1942,15 +1940,13 @@ class PlatformLibrary(object):
                     )
 
             # CH4: Read-only root filesystem
-            if 'CH4' not in excluded_rules:
+            if "CH4" not in excluded_rules:
                 csc_ro = csc.read_only_root_filesystem if csc else None
                 if not csc_ro:
-                    violations.append(
-                        f"[CH4] container '{cname}': readOnlyRootFilesystem is not true"
-                    )
+                    violations.append(f"[CH4] container '{cname}': readOnlyRootFilesystem is not true")
 
             # CH5: Linux capabilities must be dropped
-            if 'CH5' not in excluded_rules:
+            if "CH5" not in excluded_rules:
                 caps = csc.capabilities if csc else None
                 if caps is None:
                     violations.append(
@@ -1959,35 +1955,31 @@ class PlatformLibrary(object):
                     )
                 else:
                     drop_list = [str(c).upper() for c in (caps.drop or [])]
-                    if 'ALL' not in drop_list:
+                    if "ALL" not in drop_list:
                         violations.append(
                             f"[CH5] container '{cname}': capabilities.drop does not contain "
                             f"'ALL' (actual drop={caps.drop or []})"
                         )
                     if caps.add:
                         violations.append(
-                            f"[CH5] container '{cname}': capabilities.add is set "
-                            f"(forbidden additions={caps.add})"
+                            f"[CH5] container '{cname}': capabilities.add is set (forbidden additions={caps.add})"
                         )
 
             # CH6: Seccomp profile must be RuntimeDefault
-            if 'CH6' not in excluded_rules:
+            if "CH6" not in excluded_rules:
                 pod_seccomp = pod_sc.seccomp_profile if pod_sc else None
                 csc_seccomp = csc.seccomp_profile if csc else None
-                effective_seccomp = (
-                    csc_seccomp if csc_seccomp is not None else pod_seccomp
-                )
-                if effective_seccomp is None or effective_seccomp.type != 'RuntimeDefault':
-                    actual_type = effective_seccomp.type if effective_seccomp else 'not set'
+                effective_seccomp = csc_seccomp if csc_seccomp is not None else pod_seccomp
+                if effective_seccomp is None or effective_seccomp.type != "RuntimeDefault":
+                    actual_type = effective_seccomp.type if effective_seccomp else "not set"
                     violations.append(
-                        f"[CH6] container '{cname}': seccompProfile.type='{actual_type}' "
-                        "(must be 'RuntimeDefault')"
+                        f"[CH6] container '{cname}': seccompProfile.type='{actual_type}' (must be 'RuntimeDefault')"
                     )
 
             # CH7: Bidirectional mount propagation forbidden
-            if 'CH7' not in excluded_rules:
-                for vm in (container.volume_mounts or []):
-                    if vm.mount_propagation == 'Bidirectional':
+            if "CH7" not in excluded_rules:
+                for vm in container.volume_mounts or []:
+                    if vm.mount_propagation == "Bidirectional":
                         violations.append(
                             f"[CH7] container '{cname}': volumeMount '{vm.name}' "
                             f"at '{vm.mount_path}' uses Bidirectional mount propagation "
@@ -1995,8 +1987,8 @@ class PlatformLibrary(object):
                         )
 
             # CH8: Forbidden ports
-            if 'CH8' not in excluded_rules:
-                for port in (container.ports or []):
+            if "CH8" not in excluded_rules:
+                for port in container.ports or []:
                     if port.container_port in _FORBIDDEN_PORTS:
                         violations.append(
                             f"[CH8] container '{cname}': containerPort "
@@ -2004,26 +1996,26 @@ class PlatformLibrary(object):
                         )
 
             # CH9: Image tag required
-            if 'CH9' not in excluded_rules:
-                image = container.image or ''
-                if ':' not in image:
+            if "CH9" not in excluded_rules:
+                image = container.image or ""
+                if ":" not in image:
                     violations.append(
                         f"[CH9] container '{cname}': image '{image}' has no tag "
                         "(a tag is required, e.g. my-app:1.2.3 or my-app:latest)"
                     )
 
             # CH12: Secrets must not be exposed as environment variables
-            if 'CH12' not in excluded_rules:
-                for env_var in (container.env or []):
+            if "CH12" not in excluded_rules:
+                for env_var in container.env or []:
                     if env_var.value_from and env_var.value_from.secret_key_ref:
                         violations.append(
                             f"[CH12] container '{cname}': env var '{env_var.name}' "
                             "uses secretKeyRef — secrets must be mounted as files, "
                             "not exposed as environment variables"
                         )
-                for env_from in (container.env_from or []):
+                for env_from in container.env_from or []:
                     if env_from.secret_ref:
-                        secret_name = (env_from.secret_ref.name or '(unnamed)')
+                        secret_name = env_from.secret_ref.name or "(unnamed)"
                         violations.append(
                             f"[CH12] container '{cname}': envFrom includes "
                             f"secretRef '{secret_name}' — secrets must be mounted as files"
