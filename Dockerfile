@@ -63,5 +63,5 @@ RUN \
 
 WORKDIR ${ROBOT_HOME}
 
-ENTRYPOINT ["/usr/bin/tini", "--", "/docker-entrypoint.sh"]
+ENTRYPOINT ["/sbin/tini", "--", "/docker-entrypoint.sh"]
 CMD ["run-robot"]
