@@ -18,20 +18,19 @@ generate_email_notification_file() {
 
     # Logging functions
     log_info() {
-        echo "INFO: $1"
+        echo "ℹ️ $1"
+    }
+
+    log_success() {
+        echo "✅ $1"
     }
 
     log_warning() {
-        echo "WARNING: $1"
+        echo "⚠️ $1"
     }
 
     log_error() {
-        echo "ERROR: $1"
-    }
-
-    # shellcheck disable=SC2329
-    log_success() {
-        echo "SUCCESS: $1"
+        echo "❌ $1"
     }
 
     # Get script directory
@@ -66,7 +65,8 @@ generate_email_notification_file() {
     log_info "Generating message from template: $template_file"
 
     # Calculate pass rate and test details
-    source "$SCRIPT_DIR/calculate-email-notification-variables.sh" "$allure_results_dir"
+    # shellcheck source=/home/runner/work/qubership-testing-platform-common-scripts/qubership-testing-platform-common-scripts/scripts/email-notification/calculate-email-notification-variables.sh
+    source "$SCRIPT_DIR/calculate-email-notification-variables.sh" "$allure_results_dir" || true
 
     # Calculate additional metrics
     if [ -n "${TEST_TOTAL_COUNT:-}" ] && [ "$TEST_TOTAL_COUNT" -gt 0 ]; then
@@ -79,7 +79,11 @@ generate_email_notification_file() {
     EXECUTION_DATE="${EXECUTION_DATE:-$(date '+%Y-%m-%d %H:%M:%S')}"
     TEST_COVERAGE="${TEST_COVERAGE:-100.00}"
     ATP_REPORT_VIEW_UI_URL="${ATP_REPORT_VIEW_UI_URL:-https://example.com}"
-    ALLURE_REPORT_URL="${ATP_REPORT_VIEW_UI_URL}/Report/${ENVIRONMENT_NAME}/${CURRENT_DATE}/${CURRENT_TIME}/allure-report/index.html"
+    if [[ "${ATP_REPORT_VIEW_UI_URL}" == Test\ not\ started* ]]; then
+        ALLURE_REPORT_URL="${ATP_REPORT_VIEW_UI_URL}"
+    else
+        ALLURE_REPORT_URL="${ATP_REPORT_VIEW_UI_URL}/Report/${ENVIRONMENT_NAME}/${CURRENT_DATE}/${CURRENT_TIME}/allure-report/index.html"
+    fi
     TIMESTAMP="${TIMESTAMP:-$(date '+%Y-%m-%d %H:%M:%S UTC')}"
 
     # Read template content
@@ -90,7 +94,7 @@ generate_email_notification_file() {
 
     # Replace placeholders and handle conditional blocks using awk
     local message_content
-    message_content=$(echo "$template_content" | awk -v overall_status="$TEST_OVERALL_STATUS" \
+    message_content=$(cho "$template_content" | awk -v overall_status="$TEST_OVERALL_STATUS" \
         -v pass_rate="$TEST_PASS_RATE" \
         -v total_count="$TEST_TOTAL_COUNT" \
         -v passed_count="$TEST_PASSED_COUNT" \
@@ -178,22 +182,21 @@ generate_email_notification_file() {
     }')
 
     # Replace TEST_DETAILS placeholder separately
-    if [ -n "${TEST_DETAILS_STRING:-}" ]; then
-        # Create temporary file with test details
-        temp_details_file=$(mktemp)
-        echo -e "$TEST_DETAILS_STRING" >"$temp_details_file"
-
-        # Use sed with file input to replace placeholder
+    if [ -n "${TEST_DETAILS_FILE:-}" ] && [ -f "$TEST_DETAILS_FILE" ]; then
+        temp_details_file="$TEST_DETAILS_FILE"
         message_content=$(echo "$message_content" | sed "/{{TEST_DETAILS}}/r $temp_details_file" | sed "/{{TEST_DETAILS}}/d")
-
-        # Clean up temporary file
+    elif [ -n "${TEST_DETAILS_STRING:-}" ]; then
+        # legacy fallback for older callers
+        temp_details_file=$(mktemp)
+        echo -e "$TEST_DETAILS_STRING" > "$temp_details_file"
+        message_content=$(echo "$message_content" | sed "/{{TEST_DETAILS}}/r $temp_details_file" | sed "/{{TEST_DETAILS}}/d")
         rm -f "$temp_details_file"
     else
-        message_content="${message_content//\{\{TEST_DETAILS\}\}/No test details available}"
+        message_content=$(echo "$message_content" | sed "s|{{TEST_DETAILS}}|No test details available|g")
     fi
 
     # Write the generated message to output file
-    printf "%s" "$message_content" >"$output_file"
+    printf "%s" "$message_content" > "$output_file"
 
     log_success "Message generated successfully: $output_file"
 
