@@ -21,6 +21,7 @@ generate_email_notification_file() {
         echo "ℹ️ $1"
     }
 
+    # shellcheck disable=SC2329
     log_success() {
         echo "✅ $1"
     }

@@ -23,6 +23,7 @@ generate_email_notification_json() {
         echo "ℹ️ $1"
     }
 
+    # shellcheck disable=SC2329
     log_success() {
         echo "✅ $1"
     }
