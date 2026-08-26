@@ -18,70 +18,70 @@ fail() {
     echo "❌ FATAL: $error_message"
     echo "⚠️  Delegating cleanup to EXIT trap (finalize_once)."
     FAIL_MESSAGE="$error_message"
-    # Catched by EXIT trap and goes to finalize_once()
+    # Caught by EXIT trap and goes to finalize_once()
     exit 1
 }
 
 #shellcheck disable=SC2329
 finalize_once() {
-  local rc=$?
+    local rc=$?
 
-  if [ "$FINALIZE_DONE" != "true" ]; then
-    FINALIZE_DONE=true
-    echo "🔄 EXIT trap triggered with rc=$rc"
+    if [ "$FINALIZE_DONE" != "true" ]; then
+        FINALIZE_DONE=true
+        echo "🔄 EXIT trap triggered with rc=$rc"
 
-    set +e
+        set +e
 
-    # When fail() triggered the exit, write a minimal error-state JSON so
-    # downstream pipeline stages (e.g. "get ATP report file") receive a valid
-    # FAILED payload instead of finding no file at all.
-    if [ "$rc" -ne 0 ]; then
-      echo "⚠️  Non-zero exit detected — pre-seeding error-state variables for generate_email_notification_json."
-      # Pre-export the variables that generate_email_notification_json reads.
-      # calculate-email-notification-variables.sh will bail early (no allure results),
-      # leaving these values intact so the downstream JSON reflects the fatal error.
-      export TEST_OVERALL_STATUS="FAILED"
-      export TEST_PASS_RATE=0
-      export TEST_PASS_RATE_ROUNDED=0
-      export TEST_TOTAL_COUNT=0
-      export TEST_PASSED_COUNT=0
-      export TEST_FAILED_COUNT=0
-      export TEST_SKIPPED_COUNT=0
-      export TEST_COVERAGE=0
-      unset TEST_DETAILS_STRING
-      export TEST_DETAILS_FILE=""
-      export EXECUTION_DATE
-      EXECUTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
-      export TIMESTAMP
-      TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S UTC')"
-      if compgen -G "$TMP_DIR/allure-results/*-result.json" > /dev/null 2>&1; then
-        echo "ℹ️  Allure results detected — skipping 'Test not started' URL override."
-      else
-        export ALLURE_REPORT_URL="Test not started. Please check the logs for more details. $FAIL_MESSAGE. "
-        export ATP_REPORT_VIEW_UI_URL="Test not started. Please check the logs for more details. $FAIL_MESSAGE. "
-      fi
+        # When fail() triggered the exit, write a minimal error-state JSON so
+        # downstream pipeline stages (e.g. "get ATP report file") receive a valid
+        # FAILED payload instead of finding no file at all.
+        if [ "$rc" -ne 0 ]; then
+            echo "⚠️  Non-zero exit detected — pre-seeding error-state variables for generate_email_notification_json."
+            # Pre-export the variables that generate_email_notification_json reads.
+            # calculate-email-notification-variables.sh will bail early (no allure results),
+            # leaving these values intact so the downstream JSON reflects the fatal error.
+            export TEST_OVERALL_STATUS="FAILED"
+            export TEST_PASS_RATE=0
+            export TEST_PASS_RATE_ROUNDED=0
+            export TEST_TOTAL_COUNT=0
+            export TEST_PASSED_COUNT=0
+            export TEST_FAILED_COUNT=0
+            export TEST_SKIPPED_COUNT=0
+            export TEST_COVERAGE=0
+            unset TEST_DETAILS_STRING
+            export TEST_DETAILS_FILE=""
+            export EXECUTION_DATE
+            EXECUTION_DATE="$(date '+%Y-%m-%d %H:%M:%S')"
+            export TIMESTAMP
+            TIMESTAMP="$(date '+%Y-%m-%d %H:%M:%S UTC')"
+            if compgen -G "$TMP_DIR/allure-results/*-result.json" > /dev/null 2>&1; then
+                echo "ℹ️  Allure results detected — skipping 'Test not started' URL override."
+            else
+                export ALLURE_REPORT_URL="Test not started. Please check the logs for more details. $FAIL_MESSAGE. "
+                export ATP_REPORT_VIEW_UI_URL="Test not started. Please check the logs for more details. $FAIL_MESSAGE. "
+            fi
+        fi
+
+        generate_email_notification_json || true
+
+        # Source runner-specific missed-test detector if provided.
+        if [ -f "/app/detect-missed-tests.sh" ]; then
+            # shellcheck disable=SC1091
+            source "/app/detect-missed-tests.sh" || true
+        fi
+
+        # Finalize upload only when publishing to S3 (bucket set)
+        if atp_report_upload; then
+            finalize_upload || true
+        else
+            echo " Skipping upload finalization (no bucket — results stay local)"
+            echo " Test results are available locally at: $TMP_DIR"
+        fi
+        sleep 15
+
+        set -e
     fi
 
-    generate_email_notification_json || true
-
-    # Source runner-specific missed-test detector if provided.
-    if [ -f "/app/detect-missed-tests.sh" ]; then
-      # shellcheck disable=SC1091
-      source "/app/detect-missed-tests.sh" || true
-    fi
-
-    # Finalize upload only when publishing to S3 (bucket set)
-    if atp_report_upload; then
-        finalize_upload || true
-    else
-        echo " Skipping upload finalization (no bucket — results stay local)"
-        echo " Test results are available locally at: $TMP_DIR"
-    fi
-    sleep 15
-
-    set -e
-  fi
-
-  # Always exit 0 so Argo/Kubernetes does not treat this pod as failed and hang.
-  exit 0
+    # Always exit 0 so Argo/Kubernetes does not treat this pod as failed and hang.
+    exit 0
 }

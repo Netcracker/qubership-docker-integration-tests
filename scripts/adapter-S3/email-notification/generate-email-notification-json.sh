@@ -49,7 +49,6 @@ generate_email_notification_json() {
 
     # Calculate pass rate and test details (may return non-zero when no results;
     # finalize_once pre-seeds FAILED stats in that case).
-    # shellcheck source=/home/runner/work/qubership-testing-platform-common-scripts/qubership-testing-platform-common-scripts/scripts/email-notification/calculate-email-notification-variables.sh
     source "$SCRIPT_DIR/calculate-email-notification-variables.sh" "$allure_results_dir" || true
     unset TEST_DETAILS_STRING
 
@@ -92,33 +91,33 @@ generate_email_notification_json() {
             find "$allure_results_dir" -maxdepth 1 -name '*-result.json' -print0 |
                 xargs -0 -r cat -- |
                 jq -s '[
-                  group_by(
-                    if (.historyId // "") != "" then .historyId
-                    elif (.fullName // "") != "" then .fullName
-                    else .uuid end
-                  )
-                  | .[]
-                  | (max_by(.stop // .start // 0)) as $w
-                  | (length - 1) as $retries
-                  | (
-                      if $w.status == "passed" then "PASSED"
-                      elif $w.status == "failed" then "FAILED"
-                      elif $w.status == "skipped" then "SKIPPED"
-                      else "UNKNOWN" end
+                    group_by(
+                        if (.historyId // "") != "" then .historyId
+                        elif (.fullName // "") != "" then .fullName
+                        else .uuid end
+                    )
+                    | .[]
+                    | (max_by(.stop // .start // 0)) as $w
+                    | (length - 1) as $retries
+                    | (
+                        if $w.status == "passed" then "PASSED"
+                        elif $w.status == "failed" then "FAILED"
+                        elif $w.status == "skipped" then "SKIPPED"
+                        else "UNKNOWN" end
                     ) as $base
-                  | {
-                      status: (
-                        if $retries == 0 then $base
-                        elif $retries == 1 then "\($base) (1 retry)"
-                        else "\($base) (\($retries) retries)" end
-                      ),
-                      test_name: $w.name,
-                      emoji: (
-                        if $w.status == "passed" then "✅"
-                        elif $w.status == "failed" then "❌"
-                        elif $w.status == "skipped" then "⚠️"
-                        else "❓" end
-                      )
+                    | {
+                        status: (
+                            if $retries == 0 then $base
+                            elif $retries == 1 then "\($base) (1 retry)"
+                            else "\($base) (\($retries) retries)" end
+                        ),
+                        test_name: $w.name,
+                        emoji: (
+                            if $w.status == "passed" then "✅"
+                            elif $w.status == "failed" then "❌"
+                            elif $w.status == "skipped" then "⚠️"
+                            else "❓" end
+                        )
                     }
                 ]'
         ) || test_details_rc=$?
@@ -161,68 +160,68 @@ generate_email_notification_json() {
             --arg env_failure_rate "$TEST_FAILURE_RATE" \
             --arg env_coverage "$TEST_COVERAGE" \
             '{
-              test_results: {
-                overall_status: $overall_status,
-                pass_rate: $pass_rate,
-                pass_rate_rounded: $pass_rate_rounded,
-                total_count: $total_count,
-                passed_count: $passed_count,
-                failed_count: $failed_count,
-                skipped_count: $skipped_count,
-                failure_rate: $failure_rate,
-                coverage: $coverage
-              },
-              execution_info: {
-                execution_date: $execution_date,
-                timestamp: $timestamp,
-                environment_name: $environment_name,
-                atp_report_view_ui_url: $atp_report_view_ui_url,
-                allure_report_url: $allure_report_url
-              },
-              test_details: $test_details,
-              environment_variables: {
-                TEST_PASS_RATE: $env_pass_rate,
-                TEST_PASS_RATE_ROUNDED: $env_pass_rate_rounded,
-                TEST_TOTAL_COUNT: $env_total_count,
-                TEST_PASSED_COUNT: $env_passed_count,
-                TEST_FAILED_COUNT: $env_failed_count,
-                TEST_SKIPPED_COUNT: $env_skipped_count,
-                TEST_OVERALL_STATUS: $env_overall_status,
-                TEST_FAILURE_RATE: $env_failure_rate,
-                TEST_COVERAGE: $env_coverage,
-                EXECUTION_DATE: $execution_date,
-                ENVIRONMENT_NAME: $environment_name,
-                ATP_REPORT_VIEW_UI_URL: $atp_report_view_ui_url,
-                ALLURE_REPORT_URL: $allure_report_url,
-                TIMESTAMP: $timestamp
-              },
-              environment_variables_description: {
-                description: "Variables used in email notification json file",
-                variables: {
-                  TEST_OVERALL_STATUS: "Overall test status (PASSED/PARTIAL/FAILED)",
-                  TEST_PASS_RATE: "Pass rate percentage with 2 decimal places",
-                  TEST_TOTAL_COUNT: "Total number of tests",
-                  TEST_PASSED_COUNT: "Number of passed tests",
-                  TEST_FAILED_COUNT: "Number of failed tests",
-                  TEST_SKIPPED_COUNT: "Number of skipped tests",
-                  TEST_FAILURE_RATE: "Failure rate percentage",
-                  TEST_COVERAGE: "Test coverage percentage",
-                  EXECUTION_DATE: "Test execution date and time",
-                  ENVIRONMENT_NAME: "Environment name (dev/staging/prod)",
-                  ATP_REPORT_VIEW_UI_URL: "Base URL for viewing reports",
-                  ALLURE_REPORT_URL: "Full URL to Allure report",
-                  TIMESTAMP: "Current timestamp",
-                  TEST_DETAILS: "Details of all tests"
+                test_results: {
+                    overall_status: $overall_status,
+                    pass_rate: $pass_rate,
+                    pass_rate_rounded: $pass_rate_rounded,
+                    total_count: $total_count,
+                    passed_count: $passed_count,
+                    failed_count: $failed_count,
+                    skipped_count: $skipped_count,
+                    failure_rate: $failure_rate,
+                    coverage: $coverage
+                },
+                execution_info: {
+                    execution_date: $execution_date,
+                    timestamp: $timestamp,
+                    environment_name: $environment_name,
+                    atp_report_view_ui_url: $atp_report_view_ui_url,
+                    allure_report_url: $allure_report_url
+                },
+                test_details: $test_details,
+                environment_variables: {
+                    TEST_PASS_RATE: $env_pass_rate,
+                    TEST_PASS_RATE_ROUNDED: $env_pass_rate_rounded,
+                    TEST_TOTAL_COUNT: $env_total_count,
+                    TEST_PASSED_COUNT: $env_passed_count,
+                    TEST_FAILED_COUNT: $env_failed_count,
+                    TEST_SKIPPED_COUNT: $env_skipped_count,
+                    TEST_OVERALL_STATUS: $env_overall_status,
+                    TEST_FAILURE_RATE: $env_failure_rate,
+                    TEST_COVERAGE: $env_coverage,
+                    EXECUTION_DATE: $execution_date,
+                    ENVIRONMENT_NAME: $environment_name,
+                    ATP_REPORT_VIEW_UI_URL: $atp_report_view_ui_url,
+                    ALLURE_REPORT_URL: $allure_report_url,
+                    TIMESTAMP: $timestamp
+                },
+                environment_variables_description: {
+                    description: "Variables used in email notification json file",
+                    variables: {
+                        TEST_OVERALL_STATUS: "Overall test status (PASSED/PARTIAL/FAILED)",
+                        TEST_PASS_RATE: "Pass rate percentage with 2 decimal places",
+                        TEST_TOTAL_COUNT: "Total number of tests",
+                        TEST_PASSED_COUNT: "Number of passed tests",
+                        TEST_FAILED_COUNT: "Number of failed tests",
+                        TEST_SKIPPED_COUNT: "Number of skipped tests",
+                        TEST_FAILURE_RATE: "Failure rate percentage",
+                        TEST_COVERAGE: "Test coverage percentage",
+                        EXECUTION_DATE: "Test execution date and time",
+                        ENVIRONMENT_NAME: "Environment name (dev/staging/prod)",
+                        ATP_REPORT_VIEW_UI_URL: "Base URL for viewing reports",
+                        ALLURE_REPORT_URL: "Full URL to Allure report",
+                        TIMESTAMP: "Current timestamp",
+                        TEST_DETAILS: "Details of all tests"
+                    }
+                },
+                status_logic: {
+                    description: "Logic for determining overall test status",
+                    rules: {
+                        PASSED: "100% of tests passed successfully",
+                        PARTIAL: "80-99% of tests passed successfully",
+                        FAILED: "Less than 80% of tests passed successfully"
+                    }
                 }
-              },
-              status_logic: {
-                description: "Logic for determining overall test status",
-                rules: {
-                  PASSED: "100% of tests passed successfully",
-                  PARTIAL: "80-99% of tests passed successfully",
-                  FAILED: "Less than 80% of tests passed successfully"
-                }
-              }
             }' > "$target_file"
     }
 
@@ -235,68 +234,68 @@ generate_email_notification_json() {
             --arg timestamp "${TIMESTAMP:-$(date '+%Y-%m-%d %H:%M:%S UTC')}" \
             --arg environment_name "${ENVIRONMENT_NAME:-Unknown}" \
             '{
-              test_results: {
-                overall_status: "FAILED",
-                pass_rate: 0,
-                pass_rate_rounded: 0,
-                total_count: 0,
-                passed_count: 0,
-                failed_count: 0,
-                skipped_count: 0,
-                failure_rate: 0,
-                coverage: 0
-              },
-              execution_info: {
-                execution_date: $execution_date,
-                timestamp: $timestamp,
-                environment_name: $environment_name,
-                atp_report_view_ui_url: $message,
-                allure_report_url: $message
-              },
-              test_details: [],
-              environment_variables: {
-                TEST_PASS_RATE: "0",
-                TEST_PASS_RATE_ROUNDED: "0",
-                TEST_TOTAL_COUNT: "0",
-                TEST_PASSED_COUNT: "0",
-                TEST_FAILED_COUNT: "0",
-                TEST_SKIPPED_COUNT: "0",
-                TEST_OVERALL_STATUS: "FAILED",
-                TEST_FAILURE_RATE: "0",
-                TEST_COVERAGE: "0",
-                EXECUTION_DATE: $execution_date,
-                ENVIRONMENT_NAME: $environment_name,
-                ATP_REPORT_VIEW_UI_URL: $message,
-                ALLURE_REPORT_URL: $message,
-                TIMESTAMP: $timestamp
-              },
-              environment_variables_description: {
-                description: "Variables used in email notification json file",
-                variables: {
-                  TEST_OVERALL_STATUS: "Overall test status (PASSED/PARTIAL/FAILED)",
-                  TEST_PASS_RATE: "Pass rate percentage with 2 decimal places",
-                  TEST_TOTAL_COUNT: "Total number of tests",
-                  TEST_PASSED_COUNT: "Number of passed tests",
-                  TEST_FAILED_COUNT: "Number of failed tests",
-                  TEST_SKIPPED_COUNT: "Number of skipped tests",
-                  TEST_FAILURE_RATE: "Failure rate percentage",
-                  TEST_COVERAGE: "Test coverage percentage",
-                  EXECUTION_DATE: "Test execution date and time",
-                  ENVIRONMENT_NAME: "Environment name (dev/staging/prod)",
-                  ATP_REPORT_VIEW_UI_URL: "Base URL for viewing reports",
-                  ALLURE_REPORT_URL: "Full URL to Allure report",
-                  TIMESTAMP: "Current timestamp",
-                  TEST_DETAILS: "Details of all tests"
+                test_results: {
+                    overall_status: "FAILED",
+                    pass_rate: 0,
+                    pass_rate_rounded: 0,
+                    total_count: 0,
+                    passed_count: 0,
+                    failed_count: 0,
+                    skipped_count: 0,
+                    failure_rate: 0,
+                    coverage: 0
+                },
+                execution_info: {
+                    execution_date: $execution_date,
+                    timestamp: $timestamp,
+                    environment_name: $environment_name,
+                    atp_report_view_ui_url: $message,
+                    allure_report_url: $message
+                },
+                test_details: [],
+                environment_variables: {
+                    TEST_PASS_RATE: "0",
+                    TEST_PASS_RATE_ROUNDED: "0",
+                    TEST_TOTAL_COUNT: "0",
+                    TEST_PASSED_COUNT: "0",
+                    TEST_FAILED_COUNT: "0",
+                    TEST_SKIPPED_COUNT: "0",
+                    TEST_OVERALL_STATUS: "FAILED",
+                    TEST_FAILURE_RATE: "0",
+                    TEST_COVERAGE: "0",
+                    EXECUTION_DATE: $execution_date,
+                    ENVIRONMENT_NAME: $environment_name,
+                    ATP_REPORT_VIEW_UI_URL: $message,
+                    ALLURE_REPORT_URL: $message,
+                    TIMESTAMP: $timestamp
+                },
+                environment_variables_description: {
+                    description: "Variables used in email notification json file",
+                    variables: {
+                        TEST_OVERALL_STATUS: "Overall test status (PASSED/PARTIAL/FAILED)",
+                        TEST_PASS_RATE: "Pass rate percentage with 2 decimal places",
+                        TEST_TOTAL_COUNT: "Total number of tests",
+                        TEST_PASSED_COUNT: "Number of passed tests",
+                        TEST_FAILED_COUNT: "Number of failed tests",
+                        TEST_SKIPPED_COUNT: "Number of skipped tests",
+                        TEST_FAILURE_RATE: "Failure rate percentage",
+                        TEST_COVERAGE: "Test coverage percentage",
+                        EXECUTION_DATE: "Test execution date and time",
+                        ENVIRONMENT_NAME: "Environment name (dev/staging/prod)",
+                        ATP_REPORT_VIEW_UI_URL: "Base URL for viewing reports",
+                        ALLURE_REPORT_URL: "Full URL to Allure report",
+                        TIMESTAMP: "Current timestamp",
+                        TEST_DETAILS: "Details of all tests"
+                    }
+                },
+                status_logic: {
+                    description: "Logic for determining overall test status",
+                    rules: {
+                        PASSED: "100% of tests passed successfully",
+                        PARTIAL: "80-99% of tests passed successfully",
+                        FAILED: "Less than 80% of tests passed successfully"
+                    }
                 }
-              },
-              status_logic: {
-                description: "Logic for determining overall test status",
-                rules: {
-                  PASSED: "100% of tests passed successfully",
-                  PARTIAL: "80-99% of tests passed successfully",
-                  FAILED: "Less than 80% of tests passed successfully"
-                }
-              }
             }' > "$target_file"
     }
 

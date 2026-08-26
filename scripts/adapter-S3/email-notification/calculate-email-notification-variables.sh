@@ -76,14 +76,14 @@ shopt -u nullglob
 aggregated="[]"
 if [ ${#result_files[@]} -gt 0 ]; then
     aggregated=$(jq -s '
-      group_by(
-        if (.historyId // "") != "" then .historyId
-        elif (.fullName // "") != "" then .fullName
-        else .uuid end
-      )
-      | map(
-          (max_by(.stop // .start // 0)) as $w |
-          { name: $w.name, status: $w.status, retries: (length - 1) }
+        group_by(
+            if (.historyId // "") != "" then .historyId
+            elif (.fullName // "") != "" then .fullName
+            else .uuid end
+        )
+        | map(
+            (max_by(.stop // .start // 0)) as $w |
+            { name: $w.name, status: $w.status, retries: (length - 1) }
         )
     ' "${result_files[@]}")
 fi
