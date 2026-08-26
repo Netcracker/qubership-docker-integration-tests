@@ -28,7 +28,8 @@ log_error() {
 
 # shellcheck disable=SC2034
 # Get script directory
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SCRIPT_DIR="${ROBOT_HOME}/scripts/adapter-S3/email-notification"
 
 # Default allure-results directory (now in parent directory)
 ALLURE_RESULTS_DIR="${1:-/tmp/clone/allure-results}"

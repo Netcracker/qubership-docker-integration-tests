@@ -38,7 +38,8 @@ generate_email_notification_json() {
 
     # Get script directory
     local SCRIPT_DIR
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    SCRIPT_DIR="${ROBOT_HOME}/scripts/adapter-S3/email-notification"
 
     local allure_results_dir="${ALLURE_RESULTS_DIR:-/tmp/clone/allure-results}"
     local output_dir="${EMAIL_NOTIFICATION_OUTPUT_DIR:-/tmp/clone/scripts/email-notification-generated}"

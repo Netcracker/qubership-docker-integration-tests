@@ -36,7 +36,8 @@ generate_email_notification_file() {
 
     # Get script directory
     local SCRIPT_DIR
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    SCRIPT_DIR="${ROBOT_HOME}/scripts/adapter-S3/email-notification"
 
     # Set default values if not provided
     if [ -z "$template_file" ]; then
