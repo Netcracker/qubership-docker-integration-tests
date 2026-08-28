@@ -107,9 +107,13 @@ jobs:
   # against a known-compliant and a known-violating workload.
   # Runs only on pull_request events, using the image that was published to
   # ghcr.io by the push-event run for the same branch.
+  # Skipped for dependabot branches: build-docker-image never pushes for
+  # dependabot, so there is no image in ghcr.io to pull.
   container-hardening-test:
     needs: build-base
-    if: github.event_name == 'pull_request'
+    if: >-
+      github.event_name == 'pull_request' &&
+      github.event.pull_request.user.login != 'dependabot[bot]'
     runs-on: ubuntu-latest
     name: container-hardening-test
     steps:
