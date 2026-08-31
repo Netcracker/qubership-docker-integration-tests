@@ -69,6 +69,15 @@ generate_email_notification_file() {
     # Calculate pass rate and test details
     source "$SCRIPT_DIR/calculate-email-notification-variables.sh" "$allure_results_dir" || true
 
+    # Defaults when calculate did not export stats (e.g. missing allure dir)
+    TEST_OVERALL_STATUS="${TEST_OVERALL_STATUS:-FAILED}"
+    TEST_PASS_RATE="${TEST_PASS_RATE:-0}"
+    TEST_PASS_RATE_ROUNDED="${TEST_PASS_RATE_ROUNDED:-0}"
+    TEST_TOTAL_COUNT="${TEST_TOTAL_COUNT:-0}"
+    TEST_PASSED_COUNT="${TEST_PASSED_COUNT:-0}"
+    TEST_FAILED_COUNT="${TEST_FAILED_COUNT:-0}"
+    TEST_SKIPPED_COUNT="${TEST_SKIPPED_COUNT:-0}"
+
     # Calculate additional metrics
     if [ -n "${TEST_TOTAL_COUNT:-}" ] && [ "$TEST_TOTAL_COUNT" -gt 0 ]; then
         TEST_FAILURE_RATE=$(awk "BEGIN {printf \"%.2f\", $TEST_FAILED_COUNT * 100 / $TEST_TOTAL_COUNT}")
@@ -95,7 +104,7 @@ generate_email_notification_file() {
 
     # Replace placeholders and handle conditional blocks using awk
     local message_content
-    message_content=$(cho "$template_content" | awk -v overall_status="$TEST_OVERALL_STATUS" \
+    message_content=$(echo "$template_content" | awk -v overall_status="$TEST_OVERALL_STATUS" \
         -v pass_rate="$TEST_PASS_RATE" \
         -v total_count="$TEST_TOTAL_COUNT" \
         -v passed_count="$TEST_PASSED_COUNT" \
