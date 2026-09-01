@@ -64,6 +64,7 @@ generate_email_notification_file() {
         return 0
     fi
 
+    # shellcheck disable=SC2218
     log_info "Generating message from template: $template_file"
 
     # Calculate pass rate and test details
