@@ -18,25 +18,26 @@ generate_email_notification_file() {
 
     # Logging functions
     log_info() {
-        echo "INFO: $1"
-    }
-
-    log_warning() {
-        echo "WARNING: $1"
-    }
-
-    log_error() {
-        echo "ERROR: $1"
+        echo "ℹ️ $1"
     }
 
     # shellcheck disable=SC2329
     log_success() {
-        echo "SUCCESS: $1"
+        echo "✅ $1"
+    }
+
+    log_warning() {
+        echo "⚠️ $1"
+    }
+
+    log_error() {
+        echo "❌ $1"
     }
 
     # Get script directory
     local SCRIPT_DIR
-    SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    # SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    SCRIPT_DIR="${ROBOT_HOME}/scripts/adapter-S3/email-notification"
 
     # Set default values if not provided
     if [ -z "$template_file" ]; then
@@ -63,10 +64,20 @@ generate_email_notification_file() {
         return 0
     fi
 
+    # shellcheck disable=SC2218
     log_info "Generating message from template: $template_file"
 
     # Calculate pass rate and test details
-    source "$SCRIPT_DIR/calculate-email-notification-variables.sh" "$allure_results_dir"
+    source "$SCRIPT_DIR/calculate-email-notification-variables.sh" "$allure_results_dir" || true
+
+    # Defaults when calculate did not export stats (e.g. missing allure dir)
+    TEST_OVERALL_STATUS="${TEST_OVERALL_STATUS:-FAILED}"
+    TEST_PASS_RATE="${TEST_PASS_RATE:-0}"
+    TEST_PASS_RATE_ROUNDED="${TEST_PASS_RATE_ROUNDED:-0}"
+    TEST_TOTAL_COUNT="${TEST_TOTAL_COUNT:-0}"
+    TEST_PASSED_COUNT="${TEST_PASSED_COUNT:-0}"
+    TEST_FAILED_COUNT="${TEST_FAILED_COUNT:-0}"
+    TEST_SKIPPED_COUNT="${TEST_SKIPPED_COUNT:-0}"
 
     # Calculate additional metrics
     if [ -n "${TEST_TOTAL_COUNT:-}" ] && [ "$TEST_TOTAL_COUNT" -gt 0 ]; then
@@ -79,7 +90,11 @@ generate_email_notification_file() {
     EXECUTION_DATE="${EXECUTION_DATE:-$(date '+%Y-%m-%d %H:%M:%S')}"
     TEST_COVERAGE="${TEST_COVERAGE:-100.00}"
     ATP_REPORT_VIEW_UI_URL="${ATP_REPORT_VIEW_UI_URL:-https://example.com}"
-    ALLURE_REPORT_URL="${ATP_REPORT_VIEW_UI_URL}/Report/${ENVIRONMENT_NAME}/${CURRENT_DATE}/${CURRENT_TIME}/allure-report/index.html"
+    if [[ "${ATP_REPORT_VIEW_UI_URL}" == Test\ not\ started* ]]; then
+        ALLURE_REPORT_URL="${ATP_REPORT_VIEW_UI_URL}"
+    else
+        ALLURE_REPORT_URL="${ATP_REPORT_VIEW_UI_URL}/Report/${ENVIRONMENT_NAME}/${CURRENT_DATE}/${CURRENT_TIME}/allure-report/index.html"
+    fi
     TIMESTAMP="${TIMESTAMP:-$(date '+%Y-%m-%d %H:%M:%S UTC')}"
 
     # Read template content
@@ -178,22 +193,22 @@ generate_email_notification_file() {
     }')
 
     # Replace TEST_DETAILS placeholder separately
-    if [ -n "${TEST_DETAILS_STRING:-}" ]; then
-        # Create temporary file with test details
-        temp_details_file=$(mktemp)
-        echo -e "$TEST_DETAILS_STRING" >"$temp_details_file"
-
-        # Use sed with file input to replace placeholder
+    if [ -n "${TEST_DETAILS_FILE:-}" ] && [ -f "$TEST_DETAILS_FILE" ]; then
+        temp_details_file="$TEST_DETAILS_FILE"
         message_content=$(echo "$message_content" | sed "/{{TEST_DETAILS}}/r $temp_details_file" | sed "/{{TEST_DETAILS}}/d")
-
-        # Clean up temporary file
+    elif [ -n "${TEST_DETAILS_STRING:-}" ]; then
+        # legacy fallback for older callers
+        temp_details_file=$(mktemp)
+        echo -e "$TEST_DETAILS_STRING" > "$temp_details_file"
+        message_content=$(echo "$message_content" | sed "/{{TEST_DETAILS}}/r $temp_details_file" | sed "/{{TEST_DETAILS}}/d")
         rm -f "$temp_details_file"
     else
-        message_content="${message_content//\{\{TEST_DETAILS\}\}/No test details available}"
+        # shellcheck disable=SC2001
+        message_content=$(echo "$message_content" | sed "s|{{TEST_DETAILS}}|No test details available|g")
     fi
 
     # Write the generated message to output file
-    printf "%s" "$message_content" >"$output_file"
+    printf "%s" "$message_content" > "$output_file"
 
     log_success "Message generated successfully: $output_file"
 

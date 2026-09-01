@@ -21,6 +21,7 @@ RUN \
     # Install dependencies
     apk add --update --no-cache \
         bash \
+        jq \
         shadow \
         vim \
         rsync \
