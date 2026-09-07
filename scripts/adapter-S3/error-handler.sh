@@ -82,6 +82,5 @@ finalize_once() {
         set -e
     fi
 
-    # Always exit 0 so Argo/Kubernetes does not treat this pod as failed and hang.
-    exit 0
+    exit "$rc"
 }
