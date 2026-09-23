@@ -1,4 +1,4 @@
-# Copyright 2024-2025 NetCracker Technology Corporation
+    # Copyright 2024-2025 NetCracker Technology Corporation
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -1111,6 +1111,53 @@ class PlatformLibrary(object):
             if not stateful_set.status.replicas or stateful_set.status.replicas != stateful_set.status.ready_replicas:
                 counter += 1
         return counter
+
+    def _workload_rolled_out(self, workload) -> bool:
+        """Returns whether a workload (`Stateful Set` or `Deployment`) rollout is fully
+        complete and every desired replica is ready.
+
+        Unlike the `active`/`ready replicas` helpers, which only compare ready replicas
+        to desired, this mirrors `kubectl rollout status`: the controller has observed
+        the current spec generation, all desired replicas are updated to the latest
+        revision and ready, and (for Stateful Sets) the update has converged to a single
+        revision. Deployments expose no `update_revision`, so that part is skipped for them.
+        """
+        status = workload.status
+        desired = workload.spec.replicas or 0
+        if desired == 0:
+            return False
+        if (status.observed_generation or 0) < (workload.metadata.generation or 0):
+            return False
+        update_revision = getattr(status, 'update_revision', None)
+        if update_revision and status.current_revision != update_revision:
+            return False
+        return (status.updated_replicas or 0) == desired and (status.ready_replicas or 0) == desired
+
+    def is_stateful_set_rolled_out(self, name: str, namespace: str) -> bool:
+        """Returns whether the particular `Stateful Set` rollout is complete and all of its
+        replicas are ready. The `Stateful Set` is found by its `name` and namespace.
+
+        This is stricter than a ready-replicas check: during a rolling upgrade the old,
+        still-ready pods no longer make it pass, so it stays False until the new revision
+        is fully rolled out.
+
+        Method raises an Exception if `Stateful Set` or `namespace` is not found.
+
+        Example:
+        | Is Stateful Set Rolled Out | cassandra1 | cassandra |
+        """
+        return self._workload_rolled_out(self.get_stateful_set(name, namespace))
+
+    def is_deployment_rolled_out(self, name: str, namespace: str) -> bool:
+        """Returns whether the particular `Deployment` rollout is complete and all of its
+        replicas are ready. The `Deployment` is found by its `name` and namespace.
+
+        Method raises an Exception if `Deployment` or `namespace` is not found.
+
+        Example:
+        | Is Deployment Rolled Out | backup-daemon | consul |
+        """
+        return self._workload_rolled_out(self.get_deployment_entity(name, namespace))
 
     # TODO: refactor this method with the same one for deployment entities
     def check_service_of_stateful_sets_is_scaled(
