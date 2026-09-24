@@ -1113,15 +1113,7 @@ class PlatformLibrary(object):
         return counter
 
     def _workload_rolled_out(self, workload) -> bool:
-        """Returns whether a workload (`Stateful Set` or `Deployment`) rollout is fully
-        complete and every desired replica is ready.
-
-        Unlike the `active`/`ready replicas` helpers, which only compare ready replicas
-        to desired, this mirrors `kubectl rollout status`: the controller has observed
-        the current spec generation, all desired replicas are updated to the latest
-        revision and ready, and (for Stateful Sets) the update has converged to a single
-        revision. Deployments expose no `update_revision`, so that part is skipped for them.
-        """
+        """True if the workload is fully rolled out and all replicas are ready."""
         status = workload.status
         desired = workload.spec.replicas or 0
         if desired == 0:
@@ -1134,30 +1126,16 @@ class PlatformLibrary(object):
         return (status.updated_replicas or 0) == desired and (status.ready_replicas or 0) == desired
 
     def is_stateful_set_rolled_out(self, name: str, namespace: str) -> bool:
-        """Returns whether the particular `Stateful Set` rollout is complete and all of its
-        replicas are ready. The `Stateful Set` is found by its `name` and namespace.
-
-        This is stricter than a ready-replicas check: during a rolling upgrade the old,
-        still-ready pods no longer make it pass, so it stays False until the new revision
-        is fully rolled out.
-
-        Method raises an Exception if `Stateful Set` or `namespace` is not found.
-
-        Example:
-        | Is Stateful Set Rolled Out | cassandra1 | cassandra |
-        """
+        """True if the Stateful Set is fully rolled out."""
         return self._workload_rolled_out(self.get_stateful_set(name, namespace))
 
-    def is_deployment_rolled_out(self, name: str, namespace: str) -> bool:
-        """Returns whether the particular `Deployment` rollout is complete and all of its
-        replicas are ready. The `Deployment` is found by its `name` and namespace.
-
-        Method raises an Exception if `Deployment` or `namespace` is not found.
-
-        Example:
-        | Is Deployment Rolled Out | backup-daemon | consul |
-        """
-        return self._workload_rolled_out(self.get_deployment_entity(name, namespace))
+    def is_deployment_rolled_out(self, service: str, namespace: str, label: str = "clusterName") -> bool:
+        """True if every Deployment belonging to `service` (matched by `label`) is fully rolled out."""
+        names = self.get_deployment_entity_names_for_service(namespace, service, label)
+        for name in names:
+            if not self._workload_rolled_out(self.get_deployment_entity(name, namespace)):
+                return False
+        return True
 
     # TODO: refactor this method with the same one for deployment entities
     def check_service_of_stateful_sets_is_scaled(
