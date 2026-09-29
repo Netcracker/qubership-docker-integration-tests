@@ -15,7 +15,7 @@ COPY scripts/adapter-S3 ${ROBOT_HOME}/scripts/adapter-S3
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
-ARG PIP="26.1.2"
+ARG PIP="26.2.1"
 
 RUN \
     # Install dependencies
@@ -27,6 +27,7 @@ RUN \
         rsync \
         ttyd \
         build-base \
+        binutils \
         apk-tools \
         ca-certificates \
         inotify-tools \
