@@ -27,7 +27,6 @@ RUN \
         rsync \
         ttyd \
         build-base \
-        binutils \
         apk-tools \
         ca-certificates \
         inotify-tools \
