@@ -1,0 +1,36 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>Netcracker/renovate-config:base",
+    "github>Netcracker/renovate-config:github-actions",
+    "github>Netcracker/renovate-config:netcracker-dependencies",
+    "github>Netcracker/renovate-config:annotated-versions",
+    "github>Netcracker/renovate-config:automerge"
+  ],
+  "prConcurrentLimit": 20,
+  "packageRules": [
+    {
+      "description": ["Automerge patch updates only; keep the Alpine major guard from the shared automerge preset"],
+      "matchUpdateTypes": ["minor", "pin", "digest", "pinDigest"],
+      "automerge": false
+    },
+    {
+      "description": ["Update boto3 and botocore together, as they are released in lockstep"],
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["boto3", "botocore"],
+      "groupName": "boto3"
+    },
+    {
+      "description": ["Update Robot Framework and its libraries together"],
+      "matchDatasources": ["pypi"],
+      "matchPackageNames": ["robotframework", "robotframework-*"],
+      "groupName": "robotframework"
+    },
+    {
+      "description": ["Skip images built from this repository: CI sets their tags, so Renovate must not pin or bump them"],
+      "matchDatasources": ["docker"],
+      "matchPackageNames": ["/^ghcr\\.io/netcracker/qubership-docker-integration-tests/"],
+      "enabled": false
+    }
+  ]
+}

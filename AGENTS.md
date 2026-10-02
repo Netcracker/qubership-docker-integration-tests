@@ -160,6 +160,30 @@ checker script, env vars and `tags_exclusion.py` rules differ.
       docs/library_documentation/PlatformLibrary.html
   ```
 
+- Run the image smoke test against a locally built image:
+
+  ```sh
+  docker build -t bdi:local .
+  .github/ci/image-smoke/run-smoke-test.sh bdi:local
+  ```
+
+## CI Gates and Renovate
+
+Renovate (`renovate.json`, shared presets from `Netcracker/renovate-config`)
+automerges patch updates once the required status checks on `main` pass.
+Each gate job reports on every pull request, so never add a `paths` filter to
+these workflows. Skip work inside the workflow with a `changes` job instead.
+
+| Required check     | Workflow                   | Covers                                        |
+|--------------------|----------------------------|-----------------------------------------------|
+| `CI Gate`          | `test.yml`                 | `pytest library/tests`, `pip check`           |
+| `Build Gate`       | `push.yml`                 | Multi-arch builds, `.github/ci/image-smoke/`  |
+| `Integration Gate` | `integration-tests.yaml`   | Container hardening suite on kind             |
+| `Chart Gate`       | `chart-test-linter.yaml`   | `helm lint`, kubeconform                      |
+| `Lint Gate`        | `super-linter.yaml`        | super-linter                                  |
+
+When you add a test job, add it to the `needs` list of its workflow's gate job.
+
 ## Compatibility Rules
 
 Every Qubership service that ships integration tests depends on this image.
