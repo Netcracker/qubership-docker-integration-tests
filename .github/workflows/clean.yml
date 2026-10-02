@@ -11,6 +11,9 @@ jobs:
       matrix:
         component:
           - name: qubership-docker-integration-tests
+          - name: qubership-docker-integration-tests-debian
+          - name: qubership-docker-integration-tests-hardening
+          - name: qubership-docker-integration-tests-hardening-transfer
     if: github.event.ref_type == 'branch'
     runs-on: ubuntu-latest
     steps:
@@ -18,10 +21,13 @@ jobs:
         uses: docker/login-action@v4
         with:
           registry: ghcr.io
-          username: ${GITHUB_ACTOR}
+          username: ${{ github.actor }}
           password: ${{secrets.GITHUB_TOKEN}}
+      # Same tag as push.yml publishes: the branch name with characters invalid in a tag replaced by '-'.
       - name: Prepare Tag
-        run: echo "TAG_NAME=$(echo ${TAG_NAME} | sed 's@refs/heads/@@;s@/@_@g')" >> $GITHUB_ENV
+        run: |
+          branch="${TAG_NAME#refs/heads/}"
+          echo "TAG_NAME=${branch//[^a-zA-Z0-9._-]/-}" >> "$GITHUB_ENV"
       - name: Get package IDs for delete
         id: get-ids-for-delete
         uses: Netcracker/get-package-ids@v0.0.1

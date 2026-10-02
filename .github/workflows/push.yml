@@ -4,11 +4,11 @@ name: Build Artifacts
 on:
   release:
     types: [created]
-  # Renovate branches are tested on pull_request events only; their images are never published.
+  # Branches are built once, by their pull request run, which also publishes the branch images.
+  # Pushes build and publish main only; releases publish the release tag.
   push:
     branches:
-      - '**'
-      - '!renovate/**'
+      - main
     # Keep in sync with the skip list in .github/ci/detect-image-changes.sh, which pull requests use.
     paths-ignore:
       - '.github/ISSUE_TEMPLATE/**'
@@ -48,6 +48,8 @@ jobs:
     timeout-minutes: 5
     outputs:
       run: ${{ steps.filter.outputs.run }}
+      publish: ${{ steps.publish.outputs.publish }}
+      branch-tag: ${{ steps.publish.outputs.branch-tag }}
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -60,6 +62,21 @@ jobs:
           BASE_SHA: ${{ github.event.pull_request.base.sha }}
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: .github/ci/detect-image-changes.sh "$BASE_SHA" "$HEAD_SHA" >> "$GITHUB_OUTPUT"
+      # Publish <branch> images for branches of this repository. Fork pull requests have no write
+      # access to the registry, and dependency update branches are tested only.
+      - name: Decide whether to publish branch images
+        id: publish
+        env:
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [[ "$HEAD_REPO" == "$REPOSITORY" && "$HEAD_REF" != renovate/* && "$HEAD_REF" != dependabot/* ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "branch-tag=${HEAD_REF//[^a-zA-Z0-9._-]/-}" >> "$GITHUB_OUTPUT"
 
   # Images that have no dependency on other images in this repository.
   # Run in parallel via the matrix.
@@ -93,14 +110,18 @@ jobs:
           file: ${{ matrix.component.file }}
           context: ${{ matrix.component.context }}
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          publish: ${{ github.event_name != 'pull_request' || needs.changes.outputs.publish == 'true' }}
+          branch-tag: ${{ needs.changes.outputs.branch-tag }}
 
   # Builds FROM qubership-docker-integration-tests at the same git ref, so it
   # must wait for build-base to publish the base image first.
-  # Skipped on pull_request events: the base image is not pushed on PRs, so
-  # there is nothing to build FROM in the registry.
+  # Runs only when build-base published: otherwise there is nothing to build FROM in the registry.
+  # The hardening image is tested by integration-tests.yaml, which builds both images locally.
   build-hardening:
-    needs: build-base
-    if: github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]'
+    needs: [changes, build-base]
+    if: >-
+      always() && needs.build-base.result == 'success' &&
+      (github.event_name != 'pull_request' || needs.changes.outputs.publish == 'true')
     runs-on: ubuntu-latest
     name: qubership-docker-integration-tests-hardening
     steps:
@@ -114,6 +135,8 @@ jobs:
           context: container-hardening
           use-base-tag: 'true'
           github-token: ${{ secrets.GITHUB_TOKEN }}
+          publish: 'true'
+          branch-tag: ${{ needs.changes.outputs.branch-tag }}
 
   # Builds each image for linux/amd64 and checks the contract that downstream images rely on.
   image-test:
@@ -145,7 +168,7 @@ jobs:
     # Only the pull_request run reports the required check. A push run of the same commit must not
     # satisfy or override it.
     name: ${{ github.event_name == 'pull_request' && 'Build Gate' || 'Build Gate (not required)' }}
-    needs: [changes, build-base, image-test]
+    needs: [changes, build-base, build-hardening, image-test]
     # Runs even when a dependency fails, so the check resolves instead of being skipped.
     if: always()
     runs-on: ubuntu-latest
@@ -157,5 +180,6 @@ jobs:
           (needs.changes.result != 'success' ||
           (needs.changes.outputs.run != 'false' &&
           (needs.build-base.result != 'success' || needs.image-test.result != 'success')))) ||
-          (github.event_name != 'pull_request' && needs.build-base.result != 'success')
+          (github.event_name != 'pull_request' && needs.build-base.result != 'success') ||
+          needs.build-hardening.result == 'failure'
         run: exit 1

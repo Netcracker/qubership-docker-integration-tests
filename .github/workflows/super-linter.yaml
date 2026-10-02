@@ -1,11 +1,11 @@
 ---
 name: Lint Code Base
 
+# Branches are linted by their pull request run; pushes lint main only.
 on:
   push:
     branches:
-      - '**'
-      - '!renovate/**'
+      - main
   pull_request:
     branches:
       - '**'
