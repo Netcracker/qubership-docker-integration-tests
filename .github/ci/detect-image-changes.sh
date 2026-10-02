@@ -15,6 +15,7 @@ trap 'rm -f "${changed_files}"' EXIT
 git diff --name-only -z "${base_sha}...${head_sha}" >"${changed_files}"
 
 while IFS= read -r -d '' path; do
+    # Keep in sync with paths-ignore of the push trigger in .github/workflows/push.yml.
     case "${path}" in
     .github/ISSUE_TEMPLATE/* | .github/PULL_REQUEST_TEMPLATE.md | .github/auto-labeler-config.yaml | \
         .github/release-drafter-config.yml | .github/super-linter.env | .github/linters/* | docs/* | \

@@ -9,6 +9,7 @@ on:
     branches:
       - '**'
       - '!renovate/**'
+    # Keep in sync with the skip list in .github/ci/detect-image-changes.sh, which pull requests use.
     paths-ignore:
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/PULL_REQUEST_TEMPLATE.md'
