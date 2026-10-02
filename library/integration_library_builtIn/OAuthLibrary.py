@@ -22,7 +22,7 @@ from oauthlib.oauth2 import MobileApplicationClient
 from requests_oauthlib import OAuth2Session
 from robot.api import logger
 
-os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
+os.environ["OAUTHLIB_INSECURE_TRANSPORT"] = "1"
 
 requests.packages.urllib3.disable_warnings()
 
@@ -38,8 +38,9 @@ class OAuthLibrary(object):
     | username=username | password=password |
     """
 
-    def __init__(self, url, registration_token, username, password, registration_endpoint="/register",
-                 grant_type="implicit"):
+    def __init__(
+        self, url, registration_token, username, password, registration_endpoint="/register", grant_type="implicit"
+    ):
         self.session = requests.session()
         self.url = url
         self.registration_token = registration_token
@@ -47,12 +48,12 @@ class OAuthLibrary(object):
         self.password = password
         self.registration_endpoint = registration_endpoint
         self.grant_type = grant_type
-        self.scope = ''
+        self.scope = ""
 
     def __del__(self):
         self.session.close()
 
-    def register_client(self, client_name: str, scope='profile openid'):
+    def register_client(self, client_name: str, scope="profile openid"):
         """
         Registers client with specified name in Identity Provider.
         :param client_name: the name of new client
@@ -62,31 +63,31 @@ class OAuthLibrary(object):
         | Register Client | elasticsearch-integration-tests-client |
         """
         headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer %s' % str(self.registration_token)
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": "Bearer %s" % str(self.registration_token),
         }
 
         data = {
             "client_name": str(client_name),
             "redirect_uris": [self.url],
             "application_type": "web",
-            "grant_types": self.grant_type
+            "grant_types": self.grant_type,
         }
 
-        if 'authorization_code' in self.grant_type or 'implicit' in self.grant_type \
-                or 'client_credentials' in self.grant_type:
-            data['scope'] = scope
+        if (
+            "authorization_code" in self.grant_type
+            or "implicit" in self.grant_type
+            or "client_credentials" in self.grant_type
+        ):
+            data["scope"] = scope
             self.scope = scope
 
-        response = requests.post(f'{self.url}{self.registration_endpoint}', headers=headers, json=data)
+        response = requests.post(f"{self.url}{self.registration_endpoint}", headers=headers, json=data)
         with suppress(Exception):
-            logger.info(f'response json: {json.dumps(response.json())}', html=True)
+            logger.info(f"response json: {json.dumps(response.json())}", html=True)
 
-        return {
-            "client_id": response.json()['client_id'],
-            "client_secret": response.json()['client_secret']
-        }
+        return {"client_id": response.json()["client_id"], "client_secret": response.json()["client_secret"]}
 
     def delete_client(self, client_id):
         """
@@ -99,20 +100,20 @@ class OAuthLibrary(object):
         token = self.get_token(client_id)
 
         headers = {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': 'Bearer %s' % str(token)
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "Authorization": "Bearer %s" % str(token),
         }
 
-        response = requests.get(f'{self.url}/api/clients', headers=headers)
+        response = requests.get(f"{self.url}/api/clients", headers=headers)
 
         clients = response.json()
 
         for client in clients:
             if client["clientId"] == client_id:
-                response = requests.delete(f'{self.url}/api/clients/{client["id"]}', headers=headers)
+                response = requests.delete(f"{self.url}/api/clients/{client['id']}", headers=headers)
                 with suppress(Exception):
-                    logger.info(f'response json: {json.dumps(response.json())}', html=True)
+                    logger.info(f"response json: {json.dumps(response.json())}", html=True)
                 break
 
     def get_token(self, client_id):
@@ -125,11 +126,11 @@ class OAuthLibrary(object):
         """
         client = MobileApplicationClient(client_id)
         fitbit = OAuth2Session(client_id, client=client, scope=self.scope)
-        authorization_url, state = fitbit.authorization_url(f'{self.url}/authorize')
+        authorization_url, state = fitbit.authorization_url(f"{self.url}/authorize")
         self.__login()
         response = self.session.post(authorization_url)
         response.raise_for_status()
-        token = fitbit.token_from_fragment(response.url).get('access_token')
+        token = fitbit.token_from_fragment(response.url).get("access_token")
         return token
 
     def get_tenant(self, token):
@@ -140,12 +141,12 @@ class OAuthLibrary(object):
         Example:
         | Get Tenant | eb53o3dasdgdf174... |
         """
-        tenant = jwt.decode(token, options={"verify_signature": False})['tenant-id']
+        tenant = jwt.decode(token, options={"verify_signature": False})["tenant-id"]
         return tenant
 
     def __login(self):
-        login_url = f'{self.url}/login'
-        headers = {'Content-Type': 'application/x-www-form-urlencoded'}
-        data = {'login': self.username, 'password': self.password}
+        login_url = f"{self.url}/login"
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        data = {"login": self.username, "password": self.password}
         response = self.session.post(login_url, data=data, headers=headers)
         response.raise_for_status()
