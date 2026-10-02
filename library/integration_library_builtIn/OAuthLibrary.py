@@ -140,7 +140,7 @@ class OAuthLibrary(object):
         Example:
         | Get Tenant | eb53o3dasdgdf174... |
         """
-        tenant = jwt.decode(token, verify=False)['tenant-id']
+        tenant = jwt.decode(token, options={"verify_signature": False})['tenant-id']
         return tenant
 
     def __login(self):

@@ -63,7 +63,7 @@ class CustomResourceStatusResolver:
         status = status_obj.get('status')
         conditions = []
         if status is not None:
-            conditions = status.get('conditions')
+            conditions = status.get('conditions') or []
         else:
             status = {}
             status_obj['status'] = status

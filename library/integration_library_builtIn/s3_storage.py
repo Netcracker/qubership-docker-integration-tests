@@ -15,12 +15,16 @@
 import json
 import logging
 import os
+import re
 import time
 
 import boto3
 from botocore import config
 from botocore.exceptions import ClientError
 from FileSystemS3 import FileSystem
+
+# Backup folder names that qubership-backup-daemon creates, for example 20240101T120000.
+VAULT_DIRNAME_MATCHER = re.compile(r"\d{8}T\d{4,6}", re.IGNORECASE)
 
 
 class S3Client:
@@ -127,7 +131,7 @@ class S3Client:
         for obj in bucket.objects.filter(Prefix=s3_folder):
             target = os.path.join("/", obj.key) if local_dir is None \
                 else os.path.join(local_dir, os.path.relpath(obj.key, s3_folder))
-            FileSystem.makedirs(os.path.dirname(target))
+            os.makedirs(os.path.dirname(target), exist_ok=True)
             if obj.key[-1] == '/':
                 continue
             bucket.download_file(obj.key, target)
