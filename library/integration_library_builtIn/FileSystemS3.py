@@ -13,28 +13,31 @@
 # limitations under the License.
 
 import os
+import shutil
 
 
 class FileSystem:
+    """Local file system operations. S3FileSystem calls them through super() to clean up a local copy
+    of a path, so they must check the local path, not the overridden exists()."""
 
     def exists(self, path):
         return os.path.exists(path)
 
     def makedirs(self, path):
-        if not self.exists(path):
+        if not os.path.exists(path):
             return os.makedirs(path)
 
     def listdir(self, path):
         return os.listdir(path)
 
     def remove(self, path):
-        if self.exists(path):
+        if os.path.isfile(path):
             os.remove(path)
 
     def rmdir(self, path):
-        if self.exists(path):
+        if os.path.isdir(path):
             os.rmdir(path)
 
     def rmtree(self, path):
-        if self.exists(path):
-            fsutil.rmtree(path)
+        if os.path.isdir(path):
+            shutil.rmtree(path)
