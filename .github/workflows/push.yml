@@ -128,7 +128,6 @@ jobs:
             file: debian-build/Dockerfile
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    name: image-test (${{ matrix.component.name }})
     steps:
       - name: Checkout
         uses: actions/checkout@v7
