@@ -142,18 +142,20 @@ jobs:
         run: .github/ci/image-smoke/run-smoke-test.sh image-under-test:ci
 
   build-gate:
-    # A skipped job reports success to a required check, so the gate skipped on other events must not
-    # share the required check name.
+    # Only the pull_request run reports the required check. A push run of the same commit must not
+    # satisfy or override it.
     name: ${{ github.event_name == 'pull_request' && 'Build Gate' || 'Build Gate (not required)' }}
     needs: [changes, build-base, image-test]
     # Runs even when a dependency fails, so the check resolves instead of being skipped.
-    if: always() && github.event_name == 'pull_request'
+    if: always()
     runs-on: ubuntu-latest
     permissions: {}
     steps:
       - name: Require successful builds when applicable
         if: >-
-          needs.changes.result != 'success' ||
+          (github.event_name == 'pull_request' &&
+          (needs.changes.result != 'success' ||
           (needs.changes.outputs.run != 'false' &&
-          (needs.build-base.result != 'success' || needs.image-test.result != 'success'))
+          (needs.build-base.result != 'success' || needs.image-test.result != 'success')))) ||
+          (github.event_name != 'pull_request' && needs.build-base.result != 'success')
         run: exit 1

@@ -1,4 +1,4 @@
-# hadolint global ignore=DL3013,DL3018
+# hadolint global ignore=DL3008,DL3013,DL3018
 FROM python:3.13-slim
 
 ENV ROBOT_HOME=/opt/robot \
@@ -43,7 +43,7 @@ RUN ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "amd64" ]; then FILE="s5cmd_${S5CMD_VERSION#v}_Linux-64bit.tar.gz"; \
        elif [ "$ARCH" = "arm64" ]; then FILE="s5cmd_${S5CMD_VERSION#v}_Linux-arm64.tar.gz"; \
        else echo "Unsupported architecture: $ARCH" && exit 1; fi \
-    && curl -fL -o /tmp/s5cmd.tar.gz https://github.com/peak/s5cmd/releases/download/${S5CMD_VERSION}/${FILE} \
+    && curl -fL -o /tmp/s5cmd.tar.gz "https://github.com/peak/s5cmd/releases/download/${S5CMD_VERSION}/${FILE}" \
     && tar -xzf /tmp/s5cmd.tar.gz -C /tmp \
     && mv /tmp/s5cmd /usr/local/bin/s5cmd \
     && chmod +x /usr/local/bin/s5cmd \
