@@ -4,9 +4,11 @@ name: Build Artifacts
 on:
   release:
     types: [created]
+  # Renovate branches are tested on pull_request events only; their images are never published.
   push:
     branches:
       - '**'
+      - '!renovate/**'
     paths-ignore:
       - '.github/ISSUE_TEMPLATE/**'
       - '.github/PULL_REQUEST_TEMPLATE.md'
@@ -60,13 +62,11 @@ jobs:
 
   # Images that have no dependency on other images in this repository.
   # Run in parallel via the matrix.
-  # Renovate branches are built on pull_request events only: their images are never published.
   build-base:
     needs: changes
     if: >-
       always() &&
-      ((github.event_name == 'pull_request' && needs.changes.outputs.run == 'true') ||
-      (github.event_name != 'pull_request' && github.actor != 'renovate[bot]'))
+      (github.event_name != 'pull_request' || needs.changes.outputs.run == 'true')
     strategy:
       fail-fast: false
       matrix:
@@ -142,7 +142,9 @@ jobs:
         run: .github/ci/image-smoke/run-smoke-test.sh image-under-test:ci
 
   build-gate:
-    name: Build Gate
+    # A skipped job reports success to a required check, so the gate skipped on other events must not
+    # share the required check name.
+    name: ${{ github.event_name == 'pull_request' && 'Build Gate' || 'Build Gate (not required)' }}
     needs: [changes, build-base, image-test]
     # Runs even when a dependency fails, so the check resolves instead of being skipped.
     if: always() && github.event_name == 'pull_request'

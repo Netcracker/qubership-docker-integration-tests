@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - '**'
+      - '!renovate/**'
   pull_request:
     branches:
       - '**'
@@ -88,7 +89,9 @@ jobs:
           DEFAULT_BRANCH: ${{ github.event.pull_request.base.ref || github.event.push.ref }}
 
   lint-gate:
-    name: Lint Gate
+    # Only the pull_request run reports the required check. A push run of the same commit must not
+    # satisfy or override it.
+    name: ${{ github.event_name == 'pull_request' && 'Lint Gate' || 'Lint Gate (not required)' }}
     needs: [prepare-configs, run-lint]
     # Runs even when a dependency fails, so the check resolves instead of being skipped.
     if: always()
