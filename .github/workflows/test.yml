@@ -1,15 +1,11 @@
 ---
 name: Run Tests
 
+# No path filter: "CI Gate" is a required status check, so it must report on every pull request.
 on:
   pull_request:
     branches:
       - '**'
-    paths:
-      - 'library/**'
-      - 'requirements.txt'
-      - 'pytest.ini'
-      - '.github/workflows/test.yml'
 
 permissions:
   contents: read
@@ -21,7 +17,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']  # match the Python version of the image
 
     steps:
       - name: Checkout code
@@ -36,7 +32,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt', 'test-requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-${{ matrix.python-version }}-
 
@@ -51,6 +47,9 @@ jobs:
           cd library
           pip install -e .
 
+      - name: Check installed dependencies for conflicts
+        run: python -m pip check
+
       - name: Run tests with pytest and generate coverage
         run: |
           python -m pytest library/tests/ -v --cov=integration_library_builtIn --cov-report=xml --cov-report=term-missing
@@ -60,3 +59,15 @@ jobs:
         with:
           name: coverage-report
           path: coverage.xml
+
+  ci-gate:
+    name: CI Gate
+    needs: [test]
+    # Runs even when a dependency fails, so the check resolves instead of being skipped.
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require successful test jobs
+        if: needs.test.result != 'success'
+        run: exit 1

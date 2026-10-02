@@ -3,7 +3,7 @@ name: "Build & Push Docker Image"
 description: >-
   Build a Docker image with multi-arch support (linux/amd64,linux/arm64) and
   push it to ghcr.io. Tags are derived from the git ref via docker/metadata-action.
-  Push is automatically skipped for pull_request events and dependabot.
+  Push is automatically skipped for pull_request events, dependabot, and renovate.
 
 inputs:
   component-name:
@@ -58,7 +58,7 @@ runs:
         component-name: ${{ inputs.component-name }}
         component-tag: ${{ steps.meta.outputs.tags }}
         access-token: ${{ inputs.github-token }}
-      if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+      if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]' }}
 
     - name: Build and push
       uses: docker/build-push-action@v6
@@ -68,7 +68,7 @@ runs:
         file: ${{ inputs.file }}
         platforms: linux/amd64,linux/arm64
         # See https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
-        push: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+        push: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' && github.actor != 'renovate[bot]' }}
         provenance: false
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
