@@ -184,6 +184,13 @@ these workflows. Skip work inside the workflow with a `changes` job instead.
 
 When you add a test job, add it to the `needs` list of its workflow's gate job.
 
+Each commit is built and linted once. Branches run only on `pull_request`
+events; `push` triggers cover `main` only. A pull request from a branch of this
+repository publishes `<branch>` images (with `/` replaced by `-`), so open a
+pull request, a draft is enough, to get images for downstream testing.
+Renovate, Dependabot, and fork branches are built but not published.
+`clean.yml` deletes the branch images when the branch is deleted.
+
 ## Compatibility Rules
 
 Every Qubership service that ships integration tests depends on this image.
