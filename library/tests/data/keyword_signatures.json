@@ -1,0 +1,1546 @@
+{
+  "MonitoringLibrary": {
+    "__init__": [
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "host"
+      },
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "username"
+      },
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "password"
+      }
+    ],
+    "create_dashboard_in_namespace": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      }
+    ],
+    "delete_dashboard_in_namespace": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      }
+    ],
+    "get_alert_status": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "alert_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_dashboard_in_namespace": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      }
+    ],
+    "get_full_metric_values": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "metric_name"
+      }
+    ],
+    "get_last_metric_value": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "metric_name"
+      }
+    ],
+    "get_metric_values": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "metric_name"
+      }
+    ],
+    "patch_dashboard_in_namespace": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      }
+    ],
+    "replace_dashboard_in_namespace": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      }
+    ]
+  },
+  "OAuthLibrary": {
+    "__init__": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "url"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "registration_token"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "username"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "password"
+      },
+      {
+        "default": "'/register'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "registration_endpoint"
+      },
+      {
+        "default": "'implicit'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "grant_type"
+      }
+    ],
+    "delete_client": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "client_id"
+      }
+    ],
+    "get_tenant": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "token"
+      }
+    ],
+    "get_token": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "client_id"
+      }
+    ],
+    "register_client": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "client_name"
+      },
+      {
+        "default": "'profile openid'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "scope"
+      }
+    ]
+  },
+  "PlatformLibrary": {
+    "__init__": [
+      {
+        "default": "'false'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "managed_by_operator"
+      },
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "config_file"
+      },
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "context"
+      },
+      {
+        "default": "True",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "persist_config"
+      }
+    ],
+    "check_container_hardening": [
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "part_of"
+      },
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "exclusions"
+      }
+    ],
+    "check_service_is_scaled": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "deployment_entity_names"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "'up'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "direction"
+      },
+      {
+        "default": "300",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "timeout"
+      }
+    ],
+    "check_service_of_stateful_sets_is_scaled": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "stateful_set_names"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "'up'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "direction"
+      },
+      {
+        "default": "300",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "timeout"
+      }
+    ],
+    "create_config_map_from_file": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "file_path"
+      }
+    ],
+    "create_deployment_entity": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "create_deployment_entity_from_file": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "file_path"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "create_namespaced_custom_object": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "group"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "version"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "plural"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      }
+    ],
+    "create_secret": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      }
+    ],
+    "create_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "create_service_from_file": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "file_path"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "delete_config_map_by_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "delete_deployment_entity": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "delete_namespaced_custom_object": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "group"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "version"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "plural"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      }
+    ],
+    "delete_pod_by_pod_ip": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "pod_ip"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "delete_pod_by_pod_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "0",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "grace_period"
+      }
+    ],
+    "delete_secret_by_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "delete_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "execute_command_in_pod": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "command"
+      },
+      {
+        "default": "''",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "container"
+      },
+      {
+        "default": "'/bin/bash'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "shell"
+      }
+    ],
+    "get_active_deployment_entities_count": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "deployment_entity_names"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_active_deployment_entities_count_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_active_deployment_entities_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_active_deployment_entities_names_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_active_stateful_sets_count": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "stateful_set_names"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_active_stateful_sets_counts": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "selector"
+      }
+    ],
+    "get_config_map": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_config_maps": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_custom_resource": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "api_version"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "kind"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      }
+    ],
+    "get_custom_resources": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "api_version"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "kind"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_daemon_set": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_daemon_sets": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_dd_images_from_config_map": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "config_map_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_deployment_entities": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_deployment_entities_count_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_deployment_entity": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_deployment_entity_names_by_selector": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "selector"
+      }
+    ],
+    "get_deployment_entity_names_by_service_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_deployment_entity_names_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_deployment_entity_pod_selector_labels": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_deployment_replicas_count": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_environment_variables_for_deployment_entity_container": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "container_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "variable_names"
+      }
+    ],
+    "get_environment_variables_for_stateful_set_container": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "container_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "variable_names"
+      }
+    ],
+    "get_first_deployment_entity_name_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_image": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "resource"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "container_name"
+      }
+    ],
+    "get_inactive_deployment_entities_count": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "deployment_entity_names"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_inactive_deployment_entities_count_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_inactive_deployment_entities_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_inactive_deployment_entities_names_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "get_inactive_stateful_set_count": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "stateful_set_names"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_inactive_stateful_sets_count": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "stateful_set_names"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_ingress": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_ingress_api_version": [],
+    "get_ingress_url": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_ingresses": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_namespaced_custom_object": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "group"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "version"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "plural"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      }
+    ],
+    "get_namespaced_custom_object_status": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "group"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "version"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "plural"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      }
+    ],
+    "get_pod": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_pod_container_environment_variables_for_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "container_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "variable_names"
+      }
+    ],
+    "get_pod_logs": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "pod_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "container_name"
+      },
+      {
+        "default": "100",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "tail_lines"
+      }
+    ],
+    "get_pod_names_by_selector": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "selector"
+      }
+    ],
+    "get_pod_names_by_service_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_pod_names_for_deployment_entity": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "deployment_entity_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_pod_names_for_stateful_set": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_pods": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_pods_by_selector": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "selector"
+      }
+    ],
+    "get_pods_by_service_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_replica_set": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_replica_sets": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_resource_image": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "resource_type"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "resource_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "None",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "resource_container_name"
+      }
+    ],
+    "get_route": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_route_url": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_routes": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_secret": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_secrets": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_service": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_service_selector": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_stateful_set": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_stateful_set_names_by_label": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label_value"
+      },
+      {
+        "default": "'service'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label_name"
+      }
+    ],
+    "get_stateful_set_names_by_selector": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "selector"
+      }
+    ],
+    "get_stateful_set_names_by_service_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_stateful_set_pod_selector": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_stateful_set_ready_replicas_count": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_stateful_set_replica_counts": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_stateful_set_replicas_count": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "get_stateful_sets": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "look_up_pod_ip_by_pod_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "pod_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "look_up_pod_name_by_pod_ip": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "pod_ip"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "number_of_pods_in_ready_status": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "patch_namespaced_custom_object": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "group"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "version"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "plural"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      }
+    ],
+    "patch_namespaced_deployment_entity": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      }
+    ],
+    "patch_secret": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      }
+    ],
+    "replace_namespaced_custom_object": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "group"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "version"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "plural"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "body"
+      }
+    ],
+    "scale_down_deployment_entities_by_service_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "False",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "with_check"
+      },
+      {
+        "default": "300",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "timeout"
+      }
+    ],
+    "scale_down_deployment_entity": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "scale_down_stateful_set": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "scale_down_stateful_sets_by_service_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "False",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "with_check"
+      },
+      {
+        "default": "300",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "timeout"
+      }
+    ],
+    "scale_up_deployment_entities_by_service_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "False",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "with_check"
+      },
+      {
+        "default": "300",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "timeout"
+      },
+      {
+        "kind": "VAR_KEYWORD",
+        "name": "kwargs"
+      }
+    ],
+    "scale_up_deployment_entity": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "scale_up_stateful_set": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
+    "scale_up_stateful_sets_by_service_name": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "False",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "with_check"
+      },
+      {
+        "default": "300",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "timeout"
+      },
+      {
+        "kind": "VAR_KEYWORD",
+        "name": "kwargs"
+      }
+    ],
+    "set_environment_variables_for_deployment_entity_container": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "container_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "variables_to_change"
+      }
+    ],
+    "set_environment_variables_for_stateful_set_container": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "container_name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "variables_to_change"
+      }
+    ],
+    "set_replicas_for_deployment_entity": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "1",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "replicas"
+      }
+    ],
+    "set_replicas_for_stateful_set": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "1",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "replicas"
+      }
+    ]
+  },
+  "S3BackupLibrary": {
+    "__init__": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "url"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "bucket"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "key_id"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "key_secret"
+      },
+      {
+        "default": "False",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "ssl_verify"
+      }
+    ],
+    "check_backup_exists": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "path"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "backup_id"
+      }
+    ],
+    "check_bucket_exists": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "bucket_name"
+      }
+    ],
+    "get_bucket": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "bucket_name"
+      }
+    ],
+    "remove_backup": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "path"
+      }
+    ]
+  }
+}

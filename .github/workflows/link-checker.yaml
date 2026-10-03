@@ -1,8 +1,10 @@
 ---
 name: Link Checker
 
+# Branches are checked by their pull request run; pushes check main only.
 on:
-  push: null
+  push:
+    branches: [main]
   repository_dispatch: null
   workflow_dispatch: null
   pull_request:

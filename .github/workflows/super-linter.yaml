@@ -1,10 +1,11 @@
 ---
 name: Lint Code Base
 
+# Branches are linted by their pull request run; pushes lint main only.
 on:
   push:
     branches:
-      - '**'
+      - main
   pull_request:
     branches:
       - '**'
@@ -86,3 +87,17 @@ jobs:
           # To report GitHub Actions status checks
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DEFAULT_BRANCH: ${{ github.event.pull_request.base.ref || github.event.push.ref }}
+
+  lint-gate:
+    # Only the pull_request run reports the required check. A push run of the same commit must not
+    # satisfy or override it.
+    name: ${{ github.event_name == 'pull_request' && 'Lint Gate' || 'Lint Gate (not required)' }}
+    needs: [prepare-configs, run-lint]
+    # Runs even when a dependency fails, so the check resolves instead of being skipped.
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require successful lint jobs
+        if: needs.prepare-configs.result != 'success' || needs.run-lint.result != 'success'
+        run: exit 1

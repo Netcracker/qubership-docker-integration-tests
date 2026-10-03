@@ -2,8 +2,8 @@
 name: "Build & Push Docker Image"
 description: >-
   Build a Docker image with multi-arch support (linux/amd64,linux/arm64) and
-  push it to ghcr.io. Tags are derived from the git ref via docker/metadata-action.
-  Push is automatically skipped for pull_request events and dependabot.
+  push it to ghcr.io when `publish` is 'true'. Tags are derived from the git ref via
+  docker/metadata-action, or set with `branch-tag` on pull_request events.
 
 inputs:
   component-name:
@@ -24,6 +24,16 @@ inputs:
   github-token:
     description: "GITHUB_TOKEN used for ghcr.io login and package version cleanup"
     required: true
+  publish:
+    description: "When 'true', pushes the image to ghcr.io; otherwise only builds it"
+    required: false
+    default: "false"
+  branch-tag:
+    description: >-
+      Image tag for a pull_request run, where the git ref is not the branch.
+      Pass the branch name with characters invalid in a tag replaced by '-'.
+    required: false
+    default: ""
 
 runs:
   using: "composite"
@@ -37,6 +47,7 @@ runs:
         tags: |
           type=ref,event=branch
           type=ref,event=tag
+          type=raw,value=${{ inputs.branch-tag }},enable=${{ inputs.branch-tag != '' }}
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
@@ -58,7 +69,7 @@ runs:
         component-name: ${{ inputs.component-name }}
         component-tag: ${{ steps.meta.outputs.tags }}
         access-token: ${{ inputs.github-token }}
-      if: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+      if: ${{ inputs.publish == 'true' }}
 
     - name: Build and push
       uses: docker/build-push-action@v6
@@ -67,8 +78,7 @@ runs:
         context: ${{ inputs.context }}
         file: ${{ inputs.file }}
         platforms: linux/amd64,linux/arm64
-        # See https://docs.github.com/en/code-security/dependabot/working-with-dependabot/automating-dependabot-with-github-actions#fetching-metadata-about-a-pull-request
-        push: ${{ github.event_name != 'pull_request' && github.actor != 'dependabot[bot]' }}
+        push: ${{ inputs.publish == 'true' }}
         provenance: false
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
