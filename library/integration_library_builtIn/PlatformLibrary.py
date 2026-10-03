@@ -1112,6 +1112,31 @@ class PlatformLibrary(object):
                 counter += 1
         return counter
 
+    def _workload_rolled_out(self, workload) -> bool:
+        """True if the workload is fully rolled out and all replicas are ready."""
+        status = workload.status
+        desired = workload.spec.replicas or 0
+        if desired == 0:
+            return False
+        if (status.observed_generation or 0) < (workload.metadata.generation or 0):
+            return False
+        update_revision = getattr(status, "update_revision", None)
+        if update_revision and status.current_revision != update_revision:
+            return False
+        return (status.updated_replicas or 0) == desired and (status.ready_replicas or 0) == desired
+
+    def is_stateful_set_rolled_out(self, name: str, namespace: str) -> bool:
+        """True if the Stateful Set is fully rolled out."""
+        return self._workload_rolled_out(self.get_stateful_set(name, namespace))
+
+    def is_deployment_rolled_out(self, service: str, namespace: str, label: str = "clusterName") -> bool:
+        """True if every Deployment belonging to `service` (matched by `label`) is fully rolled out."""
+        names = self.get_deployment_entity_names_for_service(namespace, service, label)
+        for name in names:
+            if not self._workload_rolled_out(self.get_deployment_entity(name, namespace)):
+                return False
+        return True
+
     # TODO: refactor this method with the same one for deployment entities
     def check_service_of_stateful_sets_is_scaled(
         self, stateful_set_names, namespace: str, direction="up", timeout=300
