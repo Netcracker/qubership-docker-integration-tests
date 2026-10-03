@@ -15,8 +15,7 @@ COPY scripts/adapter-S3 ${ROBOT_HOME}/scripts/adapter-S3
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
-# renovate: datasource=pypi depName=pip
-ARG PIP="26.1.2"
+ARG PIP="26.2.1"
 
 RUN \
     # Install dependencies
