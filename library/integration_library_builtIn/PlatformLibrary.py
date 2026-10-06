@@ -1120,10 +1120,11 @@ class PlatformLibrary(object):
             return False
         if (status.observed_generation or 0) < (workload.metadata.generation or 0):
             return False
-        update_revision = getattr(status, "update_revision", None)
-        if update_revision and status.current_revision != update_revision:
-            return False
-        return (status.updated_replicas or 0) == desired and (status.ready_replicas or 0) == desired
+        return (
+            (status.replicas or 0) == desired
+            and (status.updated_replicas or 0) == desired
+            and (status.ready_replicas or 0) == desired
+        )
 
     def is_stateful_set_rolled_out(self, name: str, namespace: str) -> bool:
         """True if the Stateful Set is fully rolled out."""
