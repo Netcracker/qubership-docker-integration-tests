@@ -1185,6 +1185,31 @@
         "name": "namespace"
       }
     ],
+    "is_deployment_rolled_out": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "service"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      },
+      {
+        "default": "'clusterName'",
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "label"
+      }
+    ],
+    "is_stateful_set_rolled_out": [
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "name"
+      },
+      {
+        "kind": "POSITIONAL_OR_KEYWORD",
+        "name": "namespace"
+      }
+    ],
     "look_up_pod_ip_by_pod_name": [
       {
         "kind": "POSITIONAL_OR_KEYWORD",
