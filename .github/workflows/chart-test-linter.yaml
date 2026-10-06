@@ -1,0 +1,88 @@
+---
+name: Lint and Test Helm Charts
+
+# No path filter: "Chart Gate" is a required status check, so it must report on every pull request.
+# The changes job skips the checks when the chart did not change.
+on:
+  pull_request:
+    branches:
+      - '**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: helm-chart-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CHART_DIR: container-hardening/helm/container-hardening
+  # renovate: datasource=docker depName=ghcr.io/yannh/kubeconform
+  KUBECONFORM_VERSION: v0.7.0
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.filter.outputs.run }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Detect chart changes
+        id: filter
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if git diff --quiet "${BASE_SHA}...${HEAD_SHA}" -- "${CHART_DIR}" .github/workflows/chart-test-linter.yaml; then
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  lint-test:
+    needs: changes
+    if: needs.changes.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Install Helm
+        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5
+
+      - name: Lint chart
+        run: helm lint --strict "${CHART_DIR}"
+
+      - name: Validate rendered manifests for Kubernetes
+        run: |
+          helm template container-hardening "${CHART_DIR}" \
+            --set containerHardening.partOf=ci-test \
+            --set 'containerHardening.exclusions._all=CH12' |
+            docker run --rm -i "ghcr.io/yannh/kubeconform:${KUBECONFORM_VERSION}" -strict -summary -
+
+      - name: Validate rendered manifests for OpenShift
+        run: |
+          helm template container-hardening "${CHART_DIR}" --set PAAS_PLATFORM= |
+            docker run --rm -i "ghcr.io/yannh/kubeconform:${KUBECONFORM_VERSION}" -strict -summary -
+
+  chart-gate:
+    name: Chart Gate
+    needs: [changes, lint-test]
+    # Runs even when a dependency fails, so the check resolves instead of being skipped.
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require chart validation when applicable
+        if: >-
+          needs.changes.result != 'success' ||
+          (needs.changes.outputs.run != 'false' && needs.lint-test.result != 'success')
+        run: exit 1

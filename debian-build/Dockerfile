@@ -1,5 +1,5 @@
-# hadolint global ignore=DL3013,DL3018
-FROM python:3.13-slim
+# hadolint global ignore=DL3008,DL3013,DL3018
+FROM python:3.13-slim@sha256:3dd7cc108ec1493442514f5c2a871af6af0ec31d768ff6e378a93340c3b3db5f
 
 ENV ROBOT_HOME=/opt/robot \
     PYTHONPATH=/usr/local/lib/python3.13/site-packages/integration_library_builtIn \
@@ -15,6 +15,11 @@ COPY scripts/adapter-S3 ${ROBOT_HOME}/scripts/adapter-S3
 COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
+# renovate: datasource=github-releases depName=tsl0922/ttyd
+ARG TTYD_VERSION=1.7.7
+# renovate: datasource=github-releases depName=peak/s5cmd
+ARG S5CMD_VERSION=v2.3.0
+
 RUN \
     # Install dependencies
     apt-get update \
@@ -28,17 +33,17 @@ RUN \
         python3-yaml \
         ca-certificates \
         inotify-tools \
-    && curl -L https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.x86_64 \
+    && curl -L https://github.com/tsl0922/ttyd/releases/download/${TTYD_VERSION}/ttyd.x86_64 \
         -o /usr/local/bin/ttyd \
     && chmod +x /usr/local/bin/ttyd \
     # Clean up
     && rm -rf /var/lib/apt/lists/*
 
 RUN ARCH=$(dpkg --print-architecture) \
-    && if [ "$ARCH" = "amd64" ]; then FILE="s5cmd_2.3.0_Linux-64bit.tar.gz"; \
-       elif [ "$ARCH" = "arm64" ]; then FILE="s5cmd_2.3.0_Linux-arm64.tar.gz"; \
+    && if [ "$ARCH" = "amd64" ]; then FILE="s5cmd_${S5CMD_VERSION#v}_Linux-64bit.tar.gz"; \
+       elif [ "$ARCH" = "arm64" ]; then FILE="s5cmd_${S5CMD_VERSION#v}_Linux-arm64.tar.gz"; \
        else echo "Unsupported architecture: $ARCH" && exit 1; fi \
-    && curl -fL -o /tmp/s5cmd.tar.gz https://github.com/peak/s5cmd/releases/download/v2.3.0/${FILE} \
+    && curl -fL -o /tmp/s5cmd.tar.gz "https://github.com/peak/s5cmd/releases/download/${S5CMD_VERSION}/${FILE}" \
     && tar -xzf /tmp/s5cmd.tar.gz -C /tmp \
     && mv /tmp/s5cmd /usr/local/bin/s5cmd \
     && chmod +x /usr/local/bin/s5cmd \

@@ -12,13 +12,17 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import datetime
 import os
 import re
 import sys
-import datetime
+import time
 from enum import Enum
 
+from kubernetes.client.exceptions import ApiException
 from PlatformLibrary import PlatformLibrary
+
+MAX_STATUS_UPDATE_RETRIES = 5
 
 
 class CustomResourceStatusResolver:
@@ -36,7 +40,7 @@ class CustomResourceStatusResolver:
     def resolve_custom_resource_by_path(self):
         parts = self.path.split("/")
         if len(parts) != 5:
-            raise Exception(f'Path to custom resource must contain exactly five parts, {len(parts)} given')
+            raise Exception(f"Path to custom resource must contain exactly five parts, {len(parts)} given")
         self.group = parts[0]
         self.version = parts[1]
         self.namespace = parts[2]
@@ -49,47 +53,58 @@ class CustomResourceStatusResolver:
             if attr != "path" and not value:
                 errors.append(attr)
         if errors:
-            raise Exception(f'{",".join(errors)} attribute{"s" if len(errors) > 1 else ""} must not be empty to find '
-                            f'custom resource for status update')
+            raise Exception(
+                f"{','.join(errors)} attribute{'s' if len(errors) > 1 else ''} must not be empty to find "
+                f"custom resource for status update"
+            )
 
     def update_custom_resource_status_condition(self, condition):
         self.check_cr_path()
         client = PlatformLibrary(managed_by_operator="true")
-        status_obj = client.get_namespaced_custom_object_status(self.group,
-                                                                self.version,
-                                                                self.namespace,
-                                                                self.plural,
-                                                                self.name)
-        status = status_obj.get('status')
+        for attempt in range(MAX_STATUS_UPDATE_RETRIES):
+            try:
+                self.patch_custom_resource_status_condition(client, condition)
+                return
+            except ApiException as e:
+                # 409 Conflict means the object was modified between our read and
+                # write (its resourceVersion moved). Re-fetch the latest object and
+                # retry; any other error is propagated immediately.
+                if e.status == 409 and attempt < MAX_STATUS_UPDATE_RETRIES - 1:
+                    time.sleep(0.5 * (attempt + 1))
+                    continue
+                raise
+
+    def patch_custom_resource_status_condition(self, client, condition):
+        status_obj = client.get_namespaced_custom_object_status(
+            self.group, self.version, self.namespace, self.plural, self.name
+        )
+        status = status_obj.get("status")
         conditions = []
         if status is not None:
-            conditions = status.get('conditions')
+            conditions = status.get("conditions") or []
         else:
             status = {}
-            status_obj['status'] = status
+            status_obj["status"] = status
         is_presented = False
         for i, con in enumerate(conditions):
-            if con['reason'] == "IntegrationTestsExecutionStatus":
+            if con["reason"] == "IntegrationTestsExecutionStatus":
                 conditions[i] = condition
                 is_presented = True
                 break
         if not is_presented:
             conditions.append(condition)
 
-        status['conditions'] = conditions
-        client.custom_objects_api.patch_namespaced_custom_object_status(self.group,
-                                                                        self.version,
-                                                                        self.namespace,
-                                                                        self.plural,
-                                                                        self.name,
-                                                                        status_obj)
+        status["conditions"] = conditions
+        client.custom_objects_api.patch_namespaced_custom_object_status(
+            self.group, self.version, self.namespace, self.plural, self.name, status_obj
+        )
 
 
 class ConditionType(Enum):
     SUCCESSFUL = "Successful"
     FAILED = "Failed"
-    IN_PROGRESS = 'In Progress'
-    READY = 'Ready'
+    IN_PROGRESS = "In Progress"
+    READY = "Ready"
 
 
 class ConditionStatus(Enum):
@@ -101,13 +116,16 @@ class ConditionStatus(Enum):
 def str2bool(v):
     return v.lower() in ("yes", "true", "t", "1")
 
+
 class Condition:
-    def __init__(self,
-                 is_in_progress: bool = False,
-                 message: str = None,
-                 reason: str = None,
-                 status: ConditionStatus = None,
-                 type: ConditionType = None):
+    def __init__(
+        self,
+        is_in_progress: bool = False,
+        message: str = None,
+        reason: str = None,
+        status: ConditionStatus = None,
+        type: ConditionType = None,
+    ):
         self.is_in_progress = is_in_progress
         self.message = message
         self.reason = reason if reason is not None else "IntegrationTestsExecutionStatus"
@@ -123,14 +141,14 @@ class Condition:
             "reason": self.reason,
             "status": status_value,
             "type": self.type.value,
-            "lastTransitionTime": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+            "lastTransitionTime": datetime.datetime.now(datetime.UTC).strftime("%Y-%m-%dT%H:%M:%SZ"),
         }
 
     def generate_condition_state(self):
         if self.is_in_progress:
             self.generate_in_progress_condition_state()
             return
-        with open('./output/result.txt', 'r') as file:
+        with open("./output/result.txt", "r") as file:
             self.message = file.read()
             if "RESULT: TESTS PASSED" in self.message:
                 self.status = ConditionStatus.TRUE
@@ -143,7 +161,7 @@ class Condition:
                 self.type = ConditionType.FAILED
             if os.getenv("IS_SHORT_STATUS_MESSAGE", "true").lower() == "true":
                 result_str = self.message.split("\n")[0]
-                self.message = re.sub(r'\t', "  ", result_str)
+                self.message = re.sub(r"\t", "  ", result_str)
 
     def generate_in_progress_condition_state(self):
         self.message = "Service in progress"
@@ -151,7 +169,7 @@ class Condition:
         self.status = ConditionStatus.FALSE
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     argv = sys.argv[1:]
     is_in_progress = False if len(argv) < 1 or argv[0] != "in_progress" else True
 

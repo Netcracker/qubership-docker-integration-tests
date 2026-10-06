@@ -1,15 +1,11 @@
 ---
 name: Run Tests
 
+# No path filter: "CI Gate" is a required status check, so it must report on every pull request.
 on:
   pull_request:
     branches:
       - '**'
-    paths:
-      - 'library/**'
-      - 'requirements.txt'
-      - 'pytest.ini'
-      - '.github/workflows/test.yml'
 
 permissions:
   contents: read
@@ -21,22 +17,22 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ['3.14']  # match the Python version of the image
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v7
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
           python-version: ${{ matrix.python-version }}
 
       - name: Cache pip dependencies
-        uses: actions/cache@v6
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt') }}
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('requirements.txt', 'test-requirements.txt') }}
           restore-keys: |
             ${{ runner.os }}-pip-${{ matrix.python-version }}-
 
@@ -51,12 +47,27 @@ jobs:
           cd library
           pip install -e .
 
+      - name: Check installed dependencies for conflicts
+        run: python -m pip check
+
       - name: Run tests with pytest and generate coverage
         run: |
           python -m pytest library/tests/ -v --cov=integration_library_builtIn --cov-report=xml --cov-report=term-missing
 
       - name: Upload coverage to GitHub
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
         with:
           name: coverage-report
           path: coverage.xml
+
+  ci-gate:
+    name: CI Gate
+    needs: [test]
+    # Runs even when a dependency fails, so the check resolves instead of being skipped.
+    if: always()
+    runs-on: ubuntu-latest
+    permissions: {}
+    steps:
+      - name: Require successful test jobs
+        if: needs.test.result != 'success'
+        run: exit 1
