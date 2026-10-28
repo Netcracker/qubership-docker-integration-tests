@@ -16,7 +16,7 @@ COPY requirements.txt ${ROBOT_HOME}/requirements.txt
 COPY library ${ROBOT_HOME}/integration-tests-built-in-library
 
 # renovate: datasource=pypi depName=pip
-ARG PIP="26.2.1"
+ARG PIP="26.2.2"
 
 RUN \
     # Install dependencies
