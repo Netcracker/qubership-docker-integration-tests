@@ -1,43 +1,42 @@
-## What type of PR is this? (check all applicable)
+## Change
 
-- [ ] Refactor
-- [ ] Feature
-- [ ] Bug Fix
-- [ ] Optimization
-- [ ] Documentation Update
+**What:**
+<!-- What does this PR change? -->
 
-## Description
+**Why:**
+<!-- What problem does it solve? -->
 
-TDB
+**Issue / ticket:** <!-- Link, ID, or N/A -->
 
-## Related Tickets & Documents
+## Self-Validation
 
 <!--
-For pull requests that relate or close an issue, please include them
-below.
+Check all applicable items.
+If an item is not applicable, leave it unchecked and explain why below.
+Applicable requirements must be satisfied before merge.
 -->
 
-- Related Issue #
-- Closes #
+- [ ] **BWC — API** is preserved.
+- [ ] **BWC — CRD** is preserved.
+- [ ] **BWC — Deployment Parameters** (Helm/config/env) is preserved.
+- [ ] **Upgrade** requires no client-side or existing configuration changes.
+- [ ] **Tests** for new or changed functionality are added/updated.
+- [ ] **Documentation** is updated.
+- [ ] **OpenSpec** is updated.
 
-## QA Instructions, Screenshots, Recordings
+**N/A reasons (if any):**
+<!-- List unchecked items and explain why they do not apply. -->
 
-_Please replace this line with instructions on how to test your changes, a note
-on the devices and browsers this has been tested on, as well as any relevant
-images for UI changes._
+## Test Plan and Verification
 
-### Breaking Change checklist
-_If your PR includes any deployment or processing changes, please utilize this checklist:_
-- [ ] Does it change any deployment parameters, logic of their working or rename them?
-- [ ] Did update from previous version tested with the same set of deployment parameters?
+<!--
+Describe tests executed and their results.
+Required for all PRs except minor documentation or typo fixes.
+-->
 
-## Added/updated tests?
+## Notes for reviewers (optional)
 
-- [ ] Yes
-- [ ] No, and this is why: _please replace this line with details on why tests
-      have not been included_
-- [ ] I need help with writing tests
-
-## [optional] Are there any things to highlight or double check? 
-
-## [optional] What gif best describes this PR or how it makes you feel?
+<!--
+Anything worth highlighting: risky logic, design decisions,
+known limitations, or follow-ups.
+-->
