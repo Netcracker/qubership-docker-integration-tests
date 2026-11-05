@@ -30,7 +30,7 @@ jobs:
           echo "TAG_NAME=${branch//[^a-zA-Z0-9._-]/-}" >> "$GITHUB_ENV"
       - name: Get package IDs for delete
         id: get-ids-for-delete
-        uses: Netcracker/get-package-ids@v0.0.1
+        uses: Netcracker/get-package-ids@84bc8eb8bed50218be76e671b3a24c35a1300979 # v0.0.1
         with:
           component-name: ${{ matrix.component.name }}
           component-tag: ${{ env.TAG_NAME }}
