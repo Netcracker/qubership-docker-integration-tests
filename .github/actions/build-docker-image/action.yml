@@ -64,7 +64,7 @@ runs:
 
     - name: Get package IDs for delete
       id: get-ids-for-delete
-      uses: Netcracker/get-package-ids@v0.0.1
+      uses: Netcracker/get-package-ids@84bc8eb8bed50218be76e671b3a24c35a1300979 # v0.0.1
       with:
         component-name: ${{ inputs.component-name }}
         component-tag: ${{ steps.meta.outputs.tags }}
